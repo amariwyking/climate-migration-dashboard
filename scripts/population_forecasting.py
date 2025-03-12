@@ -8,7 +8,7 @@ import pandas as pd
 def main():
     # Constants
     YEAR = 2010
-    output_data_dir = Path("../data/processed/")
+    output_data_dir = Path("../data/processed/projected_data")
     OUTPUT_FILE = output_data_dir / f"county_population_projections.csv"
 
     # Census 2065 population projection for the US
