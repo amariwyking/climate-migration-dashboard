@@ -1,44 +1,22 @@
 # Import required libraries
+from pathlib import Path
 import censusdis.data as ced
 from censusdis.datasets import ACS5
-import censusdis.states as states
 import pandas as pd
-import os
 
 
 def main():
     # Constants
     YEAR = 2010
-    OUTPUT_FILE = "county_population_projections.csv"
-    OUTPUT_PATH = os.path.join(r'C:\Code\CapstoneProject\climate-migration-dashboard\data\processed\cleaned_data', OUTPUT_FILE)
-
+    output_data_dir = Path("../data/processed/")
+    OUTPUT_FILE = output_data_dir / f"county_population_projections.csv"
 
     # Census 2065 population projection for the US
     census_national_population_2065 = 366207000
 
-    # Download the names of the states
-    state_names = ced.download(
-        dataset=ACS5,
-        vintage=YEAR,
-        state='*',
-        download_variables=['NAME'],
-    )
+    state_names = pd.read_csv("../data/raw/population_data/state_names.csv")
 
-    # Remove states that are not contiguous and locations that are not official states
-    excluded_locations = ['District of Columbia',
-                          'Alaska', 'Hawaii', 'Puerto Rico']
-    contiguous_states = state_names[~state_names['NAME'].isin(
-        excluded_locations)]['STATE']
-
-    # Pull 2010 population data for counties in the contiguous United States
-    us_county_data = ced.download(
-        dataset=ACS5,
-        vintage=YEAR,
-        download_variables=['NAME', 'B01003_001E'],
-        state=contiguous_states,
-        county='*',
-        with_geometry=True,
-    )
+    us_county_data = pd.read_csv("../data/raw/population_data/us_county_population_data_2010.csv")
 
     # Rename columns
     us_county_data = us_county_data.rename(
