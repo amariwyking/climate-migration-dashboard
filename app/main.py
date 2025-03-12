@@ -7,8 +7,9 @@ add_custom_css()
 
 def main():
     about_page = st.Page("src/pages/page1.py", title="About this project")
+    dashboard_page = st.Page("src/pages/dashboard.py", title="Dashboard")
     
-    pg = st.navigation([about_page])
+    pg = st.navigation([dashboard_page, about_page])
     pg.run()
 
 if __name__ == "__main__":
