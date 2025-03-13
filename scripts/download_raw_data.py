@@ -1,12 +1,15 @@
 from pathlib import Path
 import pandas as pd
 import censusdis.data as ced
-import dotenv
+from dotenv import load_dotenv
 from typing import List
+import os
+
+load_dotenv()
 
 # Constants
 CONFIG = {
-    "US_CENSUS_API_KEY": dotenv.get_key(dotenv.find_dotenv(), "US_CENSUS_API_KEY"),
+    "US_CENSUS_API_KEY": os.getenv("US_CENSUS_API_KEY"),
     "BASE_DATA_DIR": Path("../data/raw"),
     "HOUSING": {
         "DATASET": "acs/acs5/profile",

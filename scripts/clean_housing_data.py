@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
 import re
-from typing import Dict, List
+from typing import Dict
 
 # Configuration constants
 PATHS = {
