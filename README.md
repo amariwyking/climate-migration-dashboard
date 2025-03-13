@@ -11,3 +11,4 @@
 7. Create an .env file and add your `US_CENSUS_API_KEY` and postgresSQL `DATABASE_URL` to it
 8. Create directory and txt file to save postgress password `secrets\postgres_passwod.txt`
 9. Run `.\pipeline.bat`
+10. For dashboard Run `streamlit run dashboard/app.py`

@@ -5,21 +5,21 @@ from typing import Dict
 
 # Configuration constants
 PATHS = {
-    "processed": Path("../data/processed/cleaned_data"),
-    "raw_housing": Path("../data/raw/US_counties_housing_data_new"),
-    "raw_population": Path("../data/raw/population_data"),
+    "processed": Path("./data/processed/cleaned_data"),
+    "raw_housing": Path("./data/raw/US_counties_housing_data_new"),
+    "raw_population": Path("./data/raw/population_data"),
 }
 
 COLUMN_MAPPINGS = {
     (2010, 2014): {
         "DP04_0001E": "TOTAL_HOUSING_UNITS",
-        "DP04_0044E": "OCCUPIED_HOUSING_NOTESD",
+        "DP04_0044E": "OCCUPIED_HOUSING_UNTIS",
         "DP04_0088E": "MEDIAN_HOUSING_VALUE",
         "DP04_0132E": "MEDIAN_GROSS_RENT",
     },
     (2015, 2023): {
         "DP04_0001E": "TOTAL_HOUSING_UNITS",
-        "DP04_0002E": "OCCUPIED_HOUSING_NOTESD",
+        "DP04_0002E": "OCCUPIED_HOUSING_UNTIS",
         "DP04_0089E": "MEDIAN_HOUSING_VALUE",
         "DP04_0134E": "MEDIAN_GROSS_RENT",
     },
@@ -74,7 +74,9 @@ def process_housing_dataframe(
     columns = list(column_map.keys()) + COMMON_COLUMNS
     processed_df = df[columns].rename(columns=column_map)
 
-    processed_df["COUNTY_FIPS"] = processed_df["STATE"] + processed_df["COUNTY"]
+    processed_df["COUNTY_FIPS"] = (
+        processed_df["STATE"] + processed_df["COUNTY"]
+    ).str.zfill(5)
     processed_df["Year"] = year
 
     numeric_cols = list(column_map.values())
@@ -106,7 +108,7 @@ def load_population_data() -> pd.DataFrame:
 
 def process_population_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
     """Process individual population dataframe."""
-    df["COUNTY_FIPS"] = df["STATE"] + df["COUNTY"]
+    df["COUNTY_FIPS"] = (df["STATE"] + df["COUNTY"]).str.zfill(5)
     df["Year"] = year
     return df.rename(columns={POPULATION_COLUMN: "POPULATION"})[
         ["COUNTY_FIPS", "Year", "POPULATION"]

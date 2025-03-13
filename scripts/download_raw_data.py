@@ -10,7 +10,7 @@ load_dotenv()
 # Constants
 CONFIG = {
     "US_CENSUS_API_KEY": os.getenv("US_CENSUS_API_KEY"),
-    "BASE_DATA_DIR": Path("../data/raw"),
+    "BASE_DATA_DIR": Path("./data/raw"),
     "HOUSING": {
         "DATASET": "acs/acs5/profile",
         "VARIABLES": {
@@ -104,7 +104,7 @@ class CensusDataDownloader:
         filtered = state_df[
             ~state_df["NAME"].isin(CONFIG["POPULATION"]["EXCLUDED_STATES"])
         ]
-        return filtered["STATE"].astype(str).tolist()
+        return filtered["STATE"].astype(str).str.zfill(2).tolist()
 
     def _download_dataset(self, **kwargs) -> None:
         """Generic dataset download handler"""

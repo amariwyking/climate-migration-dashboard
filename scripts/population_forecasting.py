@@ -7,17 +7,17 @@ import pandas as pd
 
 def main():
     # Constants
-    output_data_dir = Path("../data/processed/projected_data")
+    output_data_dir = Path("./data/processed/projected_data")
     output_data_dir.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE = output_data_dir / f"county_population_projections.csv"
 
     # Census 2065 population projection for the US
     census_national_population_2065 = 366207000
 
-    state_names = pd.read_csv("../data/raw/population_data/state_names.csv")
+    state_names = pd.read_csv("./data/raw/population_data/state_names.csv")
 
     us_county_data = pd.read_csv(
-        "../data/raw/population_data/us_county_population_data_2010.csv"
+        "./data/raw/population_data/us_county_population_data_2010.csv"
     )
 
     # Rename columns
