@@ -1,4 +1,7 @@
+# Environment files
 .venv
 .env
-data/
-__pycache__/
+
+# Directories
+data
+__pycache__

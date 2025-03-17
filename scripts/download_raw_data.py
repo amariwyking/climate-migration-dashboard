@@ -1,32 +1,36 @@
 from pathlib import Path
 import pandas as pd
 import censusdis.data as ced
-import dotenv
+from dotenv import load_dotenv
 from typing import List
+import os
+
+load_dotenv()
 
 # Constants
 CONFIG = {
-    "US_CENSUS_API_KEY": dotenv.get_key(dotenv.find_dotenv(), "US_CENSUS_API_KEY"),
-    "BASE_DATA_DIR": Path("../data/raw"),
+    "US_CENSUS_API_KEY": os.getenv("US_CENSUS_API_KEY"),
+    "BASE_DATA_DIR": Path("./data/raw"),
     "HOUSING": {
         "DATASET": "acs/acs5/profile",
         "VARIABLES": {
             (2010, 2014): ["DP04_0001E", "DP04_0044E", "DP04_0088E", "DP04_0132E"],
-            (2015, 2023): ["DP04_0001E", "DP04_0002E", "DP04_0089E", "DP04_0134E"]
-        }
+            (2015, 2023): ["DP04_0001E", "DP04_0002E", "DP04_0089E", "DP04_0134E"],
+        },
     },
     "POPULATION": {
         "DATASET": "acs/acs5",
         "VARIABLE": "B01003_001E",
-        "EXCLUDED_STATES": ['District of Columbia', 'Alaska', 'Hawaii', 'Puerto Rico']
+        "EXCLUDED_STATES": ["District of Columbia", "Alaska", "Hawaii", "Puerto Rico"],
     },
-    "AVAILABLE_YEARS": range(2010, 2024)
+    "AVAILABLE_YEARS": range(2010, 2024),
 }
+
 
 class CensusDataDownloader:
     def __init__(self):
         self._validate_api_key()
-        
+
     def _validate_api_key(self):
         if not CONFIG["US_CENSUS_API_KEY"]:
             raise ValueError("US_CENSUS_API_KEY not found in .env file")
@@ -57,7 +61,7 @@ class CensusDataDownloader:
                 year=year,
                 variables=variables,
                 output_file=output_file,
-                description=f"housing data for {year}"
+                description=f"housing data for {year}",
             )
 
     def download_population_data(self) -> None:
@@ -67,7 +71,7 @@ class CensusDataDownloader:
         state_file = data_dir / "state_names.csv"
 
         contiguous_states = self._get_contiguous_states(state_file)
-        
+
         for year in CONFIG["AVAILABLE_YEARS"]:
             output_file = data_dir / f"us_county_population_data_{year}.csv"
             if self._handle_existing_file(output_file, year):
@@ -81,7 +85,7 @@ class CensusDataDownloader:
                 description=f"population data for {year}",
                 state=contiguous_states,
                 county="*",
-                with_geometry=True
+                with_geometry=True,
             )
 
     def _get_contiguous_states(self, state_file: Path) -> List[str]:
@@ -90,15 +94,17 @@ class CensusDataDownloader:
             state_df = ced.download(
                 CONFIG["POPULATION"]["DATASET"],
                 2010,
-                state='*',
-                download_variables=['NAME']
+                state="*",
+                download_variables=["NAME"],
             )
             state_df.to_csv(state_file, index=False)
             print(f"State names saved to {state_file}")
-        
+
         state_df = pd.read_csv(state_file)
-        filtered = state_df[~state_df['NAME'].isin(CONFIG["POPULATION"]["EXCLUDED_STATES"])]
-        return filtered['STATE'].astype(str).tolist()
+        filtered = state_df[
+            ~state_df["NAME"].isin(CONFIG["POPULATION"]["EXCLUDED_STATES"])
+        ]
+        return filtered["STATE"].astype(str).str.zfill(2).tolist()
 
     def _download_dataset(self, **kwargs) -> None:
         """Generic dataset download handler"""
@@ -111,7 +117,7 @@ class CensusDataDownloader:
                 state=kwargs.get("state", "*"),
                 county=kwargs.get("county", "*"),
                 with_geometry=kwargs.get("with_geometry", False),
-                api_key=CONFIG["US_CENSUS_API_KEY"]
+                api_key=CONFIG["US_CENSUS_API_KEY"],
             )
             self._save_data(df, kwargs["output_file"])
         except Exception as e:
@@ -121,7 +127,9 @@ class CensusDataDownloader:
     def _handle_existing_file(output_file: Path, year: int) -> bool:
         """Check for existing files and handle appropriately"""
         if output_file.exists():
-            print(f"Data file for {year} already exists at {output_file}. Skipping download.")
+            print(
+                f"Data file for {year} already exists at {output_file}. Skipping download."
+            )
             return True
         return False
 
@@ -129,13 +137,17 @@ class CensusDataDownloader:
     def _save_data(df: pd.DataFrame, output_file: Path) -> None:
         """Save DataFrame to CSV with validation"""
         df.to_csv(output_file, index=False)
-        print(f"Saved {len(df)} records with {len(df.columns)} variables to {output_file}")
+        print(
+            f"Saved {len(df)} records with {len(df.columns)} variables to {output_file}"
+        )
+
 
 def main():
     downloader = CensusDataDownloader()
     downloader.download_housing_data()
     downloader.download_population_data()
     print("Download process completed.")
+
 
 if __name__ == "__main__":
     main()
