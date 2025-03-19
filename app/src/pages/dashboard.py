@@ -30,17 +30,31 @@ db_conn = db.get_db_connection()
 
 # Call the function with the connection and FIPS code
 if county_fips:
+    population_historical = db.get_population_timeseries(
+        db_conn, None
+    )
+
     population_projections = db.get_population_projections_by_fips(
         db_conn, None)
 
     if not population_projections.empty:
         st.write(f"### Population Projections for {county_name}, {state_name}")
 
-        county_projections = population_projections[population_projections['COUNTY_FIPS'] == int(
+        county_pop_historical = population_historical[population_historical['COUNTY_FIPS'] == int(
             county_fips)]
+        
+        # If the county has multiple rows of data, select the row with the most complete data
+        if county_pop_historical.shape[0] > 1:
+            # Count the number of missing values in each row
+            missing_counts = county_pop_historical.isna().sum(axis=1)
 
-        print(county_projections.columns)
-        print(county_projections)
+            # Get the index of the row with the minimum number of missing values
+            min_missing_idx = missing_counts.idxmin()
+
+            county_pop_historical = county_pop_historical.loc[min_missing_idx]
+
+        county_pop_projections = population_projections[population_projections['COUNTY_FIPS'] == int(
+            county_fips)]
 
         # TODO: Rewrite to work with any number of scenarios that are included in the projections
         
@@ -62,17 +76,31 @@ if county_fips:
             'Scenario S5c'
         ]
 
-        # Get the base 2010 population
-        base_population = county_projections['POPULATION_2010'].iloc[0]
+        # Create a dictionary to store all projection scenarios
+        projections_dict = {}
 
-        # Add the 2010 population and each 2065 scenario as separate columns
-        projection_data['2010 Population'] = [
-            base_population, None]  # Just to show the starting point
-
+        # Add each projection scenario to the dictionary
         for scenario, label in zip(scenarios, scenario_labels):
-            projection_data[label] = [base_population,
-                                    county_projections[scenario].iloc[0]]
+            # Get the projected 2065 population for this scenario
+            projected_pop_2065 = county_pop_projections[scenario].iloc[0]
+            
+            # Create a copy of the historical data for this scenario
+            scenario_data = county_pop_historical.copy()
+            
+            # Add the 2065 projection to this scenario's data
+            scenario_data['pop2065'] = projected_pop_2065
+            
+            # Add this scenario to the main dictionary
+            projections_dict[label] = scenario_data
 
-        st.line_chart(projection_data)
+        # Convert the dictionary to a DataFrame with scenarios as the index
+        projection_df = pd.DataFrame(projections_dict)
+        projection_df.drop(index='COUNTY_FIPS')
+
+        # Display the dataframe
+        print(projection_df)
+
+        # Create the chart
+        st.line_chart(projection_df)
 else:
     st.info("Please select a county to view population projections.")
