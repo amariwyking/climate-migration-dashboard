@@ -107,7 +107,19 @@ if county_fips:
         st.header('Housing Analysis')
         
         st.write(f"### Median Gross Rent for {county_name}, {state_name}")
-        st.line_chart(db.get_timeseries_median_gross_rent(db_conn, county_fips=county_fips))
+        st.line_chart(db.get_county_data_table(db_conn, db.Table.MEDIAN_GROSS_RENT, county_fips=county_fips))
+        
+        st.write(f"### Median House Value for {county_name}, {state_name}")
+        st.line_chart(db.get_county_data_table(db_conn, db.Table.MEDIAN_HOUSE_VALUE, county_fips=county_fips))
+        
+        st.write(f"### Total Housing Units for {county_name}, {state_name}")
+        st.line_chart(db.get_county_data_table(db_conn, db.Table.TOTAL_HOUSING_UNITS, county_fips=county_fips))
+
+        st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
+        st.line_chart(db.get_county_data_table(db_conn, db.Table.OCCUPIED_HOUSING_UNITS, county_fips=county_fips))
+        
+
+        
     
 else:
     st.info("Please select a county to view population projections.")
