@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env file
 
-
 def get_db_connection():
     """Create and return a PostgreSQL database connection"""
     try:
@@ -90,6 +89,41 @@ def get_population_timeseries(conn, county_fips=None):
         df = pd.read_sql(query, conn)
             
         return df
+    except Exception as e:
+        st.error(f"Error loading historical population counts: {str(e)}")
+        st.stop()
+        
+def get_timeseries_median_gross_rent(conn, county_fips=None):
+    """
+    Get time series data for median gross rent for the specified county by FIPS code
+    
+    Parameters:
+    -----------
+    conn : database connection
+        PostgreSQL database connection
+    county_fips : int or list, optional
+        County FIPS code(s) to query. If None, returns all counties.
+    
+    Returns:
+    --------
+    df : pandas.DataFrame
+        DataFrame containing population projection data
+    """
+    try:
+        query = "SELECT * FROM timeseries_median_gross_rent"
+        
+        # Add COUNTY_FIPS filter if provided
+        if county_fips is not None:
+            if isinstance(county_fips, list):
+                fips_list = ", ".join(str(fips) for fips in county_fips)
+                query += f" WHERE \"COUNTY_FIPS\" IN ({fips_list})"
+            else:
+                query += f" WHERE \"COUNTY_FIPS\" = {county_fips}"
+        
+        # Execute query and return as DataFrame
+        df = pd.read_sql(query, conn).set_index("COUNTY_FIPS")
+            
+        return df.T
     except Exception as e:
         st.error(f"Error loading historical population counts: {str(e)}")
         st.stop()

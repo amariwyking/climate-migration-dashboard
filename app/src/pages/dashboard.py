@@ -102,5 +102,12 @@ if county_fips:
 
         # Create the chart
         st.line_chart(projection_df)
+        
+        st.divider()
+        st.header('Housing Analysis')
+        
+        st.write(f"### Median Gross Rent for {county_name}, {state_name}")
+        st.line_chart(db.get_timeseries_median_gross_rent(db_conn, county_fips=county_fips))
+    
 else:
     st.info("Please select a county to view population projections.")
