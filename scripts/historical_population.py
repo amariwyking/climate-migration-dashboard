@@ -38,4 +38,11 @@ counties = counties.rename(columns=
     }
 )
 
-counties.to_csv(DATA_DIR + 'processed/cleaned_data/timeseries_population.csv')
+# Name the index
+counties = counties.set_index(counties.index.set_names('COUNTY_FIPS'))
+
+# Identify the population columns
+pop_columns = counties.columns[counties.columns.str.contains('pop')]
+
+# Export the population columns indexed by COUNTY_FIPS
+counties[pop_columns].to_csv(DATA_DIR + 'processed/cleaned_data/timeseries_population.csv')
