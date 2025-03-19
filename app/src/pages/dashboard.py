@@ -95,10 +95,10 @@ if county_fips:
 
         # Convert the dictionary to a DataFrame with scenarios as the index
         projection_df = pd.DataFrame(projections_dict)
-        projection_df.drop(index='COUNTY_FIPS')
-
-        # Display the dataframe
-        print(projection_df)
+        
+        # Drop the COUNTY_FIPS column which would otherwise be included as a datapoint on the x-axis
+        projection_df = projection_df.drop(index='COUNTY_FIPS')
+        projection_df = projection_df.set_index(projection_df.index.str[3:])
 
         # Create the chart
         st.line_chart(projection_df)
