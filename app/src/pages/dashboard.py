@@ -3,6 +3,8 @@ import pandas as pd
 import src.utils as utils
 import src.db as db
 
+st.header('Climate Migration Dashboard')
+
 # TODO: Can we package the county name and FIPS code in the selectbox?
 county = st.selectbox(
     'Select a county',
@@ -22,13 +24,25 @@ if county:
 else:
     county_name = state_name = county_fips = None
 
-# Want to display time series of population
-st.header('Climate Migration Scenarios')
-
 # Get the database connection
 db_conn = db.get_db_connection()
 
-# Call the function with the connection and FIPS code
+# Call the function using the connection and FIPS code
+def display_housing_analysis(county_name, state_name, county_fips, db_conn):
+    st.header('Housing Analysis', divider=True)
+        
+    st.write(f"### Median Gross Rent for {county_name}, {state_name}")
+    st.line_chart(db.get_county_data_table(db_conn, db.Table.MEDIAN_GROSS_RENT, county_fips=county_fips))
+        
+    st.write(f"### Median House Value for {county_name}, {state_name}")
+    st.line_chart(db.get_county_data_table(db_conn, db.Table.MEDIAN_HOUSE_VALUE, county_fips=county_fips))
+        
+    st.write(f"### Total Housing Units for {county_name}, {state_name}")
+    st.line_chart(db.get_county_data_table(db_conn, db.Table.TOTAL_HOUSING_UNITS, county_fips=county_fips))
+
+    st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
+    st.line_chart(db.get_county_data_table(db_conn, db.Table.OCCUPIED_HOUSING_UNITS, county_fips=county_fips))
+
 if county_fips:
     population_historical = db.get_population_timeseries(
         db_conn, None
@@ -103,22 +117,8 @@ if county_fips:
         # Create the chart
         st.line_chart(projection_df)
         
-        st.divider()
-        st.header('Housing Analysis')
+        display_housing_analysis(county_name, state_name, county_fips, db_conn)
         
-        st.write(f"### Median Gross Rent for {county_name}, {state_name}")
-        st.line_chart(db.get_county_data_table(db_conn, db.Table.MEDIAN_GROSS_RENT, county_fips=county_fips))
-        
-        st.write(f"### Median House Value for {county_name}, {state_name}")
-        st.line_chart(db.get_county_data_table(db_conn, db.Table.MEDIAN_HOUSE_VALUE, county_fips=county_fips))
-        
-        st.write(f"### Total Housing Units for {county_name}, {state_name}")
-        st.line_chart(db.get_county_data_table(db_conn, db.Table.TOTAL_HOUSING_UNITS, county_fips=county_fips))
-
-        st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
-        st.line_chart(db.get_county_data_table(db_conn, db.Table.OCCUPIED_HOUSING_UNITS, county_fips=county_fips))
-        
-
         
     
 else:
