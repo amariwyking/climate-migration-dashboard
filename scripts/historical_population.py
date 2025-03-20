@@ -44,5 +44,15 @@ counties = counties.set_index(counties.index.set_names('COUNTY_FIPS'))
 # Identify the population columns
 pop_columns = counties.columns[counties.columns.str.contains('pop')]
 
+counties = counties[pop_columns]
+
+# Create rename dictionary and apply it in one step
+counties = counties.rename(columns={
+    col: col[3:] for col in counties.columns 
+    if col.startswith('pop') and col[3:].isdigit()
+})
+
+print(counties)
+
 # Export the population columns indexed by COUNTY_FIPS
-counties[pop_columns].to_csv(DATA_DIR + 'processed/cleaned_data/timeseries_population.csv')
+counties.to_csv(DATA_DIR + 'processed/cleaned_data/timeseries_population.csv')
