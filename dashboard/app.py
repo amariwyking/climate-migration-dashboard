@@ -1,7 +1,13 @@
+import sys
+import os
+
+# Get the absolute path of the parent directory of main.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from db import get_db_connection
+from scripts.helpers import get_db_connection
 
 st.set_page_config(page_title="Housing Market Trends", layout="wide", page_icon="🏠")
 
