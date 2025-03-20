@@ -88,7 +88,7 @@ if county_fips:
             scenario_data = county_pop_historical.copy()
             
             # Add the 2065 projection to this scenario's data
-            scenario_data['pop2065'] = projected_pop_2065
+            scenario_data['2065'] = projected_pop_2065
             
             # Add this scenario to the main dictionary
             projections_dict[label] = scenario_data
@@ -98,7 +98,7 @@ if county_fips:
         
         # Drop the COUNTY_FIPS column which would otherwise be included as a datapoint on the x-axis
         projection_df = projection_df.drop(index='COUNTY_FIPS')
-        projection_df = projection_df.set_index(projection_df.index.str[3:])
+        projection_df = projection_df.set_index(pd.to_datetime(projection_df.index, format='%Y'))
 
         # Create the chart
         st.line_chart(projection_df)
