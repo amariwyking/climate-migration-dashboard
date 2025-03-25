@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import pandas as pd
 
-from scripts.helpers import get_db_connection
+from helpers import get_db_connection
 
 db_con = get_db_connection()
 
