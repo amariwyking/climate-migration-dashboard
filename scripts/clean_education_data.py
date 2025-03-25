@@ -17,6 +17,19 @@ EDUCATION_DATA_COLUMN_MAPPINGS = {
         "B23006_009E": "HIGH_SCHOOL_GRADUATE_TOTAL",
         "B23006_016E": "SOME_COLLEGE_TOTAL",
         "B23006_023E": "BACHELOR_OR_HIGH_TOTAL",
+        "B14001_001E": "TOTAL",
+        "B14001_002E": "Enrolled",
+        "B14001_003E": "Enrolled_Nursery_Preschool",
+        "B14001_004E": "Enrolled_Kindergarten",
+        "B14001_005E": "Enrolled_Grade1_4",
+        "B14001_006E": "Enrolled_Grade5_8",
+        "B14001_007E": "Enrolled_Grade9_12",
+        "B14001_008E": "Enrolled_College_Undergrad",
+        "B14001_009E": "Enrolled_Grad_ProfSchool",
+        "B23006_007E": "LESS_THAN_HIGH_SCHOOL_UNEMPLOYED",
+        "B23006_014E": "HIGH_SCHOOL_GRADUATE_UNEMPLOYED",
+        "B23006_021E": "SOME_COLLEGE_UNEMLOYED",
+        "B23006_028E": "BACHELOR_OR_HIGH_UNEMPLOYED",
     }
 }
 
@@ -31,7 +44,7 @@ def get_year_from_filename(filename: str) -> int:
 
 
 def load_and_process_education_data() -> pd.DataFrame:
-    """Load and process education data from raw CSV files."""
+    """Load and process school attainment data from raw CSV files."""
     all_dfs = []
 
     for file in PATHS["raw_education"].iterdir():
@@ -46,7 +59,10 @@ def load_and_process_education_data() -> pd.DataFrame:
         column_map = next(
             (
                 mapping
-                for (start, end), mapping in EDUCATION_DATA_COLUMN_MAPPINGS.items()
+                for (
+                    start,
+                    end,
+                ), mapping in EDUCATION_DATA_COLUMN_MAPPINGS.items()
                 if start <= year <= end
             ),
             None,
@@ -65,7 +81,7 @@ def load_and_process_education_data() -> pd.DataFrame:
 def process_education_dataframe(
     df: pd.DataFrame, column_map: Dict[str, str], year: int
 ) -> pd.DataFrame:
-    """Process individual education dataframe."""
+    """Process individual school attainment dataframe."""
     columns = list(column_map.keys()) + COMMON_COLUMNS
     processed_df = df[columns].rename(columns=column_map)
 
