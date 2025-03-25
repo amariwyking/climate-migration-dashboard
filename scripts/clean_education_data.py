@@ -6,23 +6,18 @@ from typing import Dict
 # Configuration constants
 PATHS = {
     "processed": Path("./data/processed/cleaned_data"),
-    "raw_housing": Path("./data/raw/housing_data"),
+    "raw_education": Path("./data/raw/education_data"),
     "raw_population": Path("./data/raw/population_data"),
 }
 
-HOUSING_DATA_COLUMN_MAPPINGS = {
-    (2010, 2014): {
-        "DP04_0001E": "TOTAL_HOUSING_UNITS",
-        "DP04_0044E": "OCCUPIED_HOUSING_UNTIS",
-        "DP04_0088E": "MEDIAN_HOUSING_VALUE",
-        "DP04_0132E": "MEDIAN_GROSS_RENT",
-    },
-    (2015, 2023): {
-        "DP04_0001E": "TOTAL_HOUSING_UNITS",
-        "DP04_0002E": "OCCUPIED_HOUSING_UNTIS",
-        "DP04_0089E": "MEDIAN_HOUSING_VALUE",
-        "DP04_0134E": "MEDIAN_GROSS_RENT",
-    },
+EDUCATION_DATA_COLUMN_MAPPINGS = {
+    (2011, 2023): {
+        "B23006_001E": "TOTAL_POPULATION_25_64",
+        "B23006_002E": "LESS_THAN_HIGH_SCHOOL_TOTAL",
+        "B23006_009E": "HIGH_SCHOOL_GRADUATE_TOTAL",
+        "B23006_016E": "SOME_COLLEGE_TOTAL",
+        "B23006_023E": "BACHELOR_OR_HIGH_TOTAL",
+    }
 }
 
 COMMON_COLUMNS = ["STATE", "COUNTY"]
@@ -35,11 +30,11 @@ def get_year_from_filename(filename: str) -> int:
     return int(match.group(1)) if match else None
 
 
-def load_and_process_housing_data() -> pd.DataFrame:
-    """Load and process housing data from raw CSV files."""
+def load_and_process_education_data() -> pd.DataFrame:
+    """Load and process education data from raw CSV files."""
     all_dfs = []
 
-    for file in PATHS["raw_housing"].iterdir():
+    for file in PATHS["raw_education"].iterdir():
         if not file.is_file() or file.suffix != ".csv":
             continue
 
@@ -51,7 +46,7 @@ def load_and_process_housing_data() -> pd.DataFrame:
         column_map = next(
             (
                 mapping
-                for (start, end), mapping in HOUSING_DATA_COLUMN_MAPPINGS.items()
+                for (start, end), mapping in EDUCATION_DATA_COLUMN_MAPPINGS.items()
                 if start <= year <= end
             ),
             None,
@@ -61,16 +56,16 @@ def load_and_process_housing_data() -> pd.DataFrame:
 
         # Read and process data
         df = pd.read_csv(file, skiprows=[1], dtype=str, low_memory=False)
-        df = process_housing_dataframe(df, column_map, year)
+        df = process_education_dataframe(df, column_map, year)
         all_dfs.append(df)
 
     return pd.concat(all_dfs, ignore_index=True) if all_dfs else pd.DataFrame()
 
 
-def process_housing_dataframe(
+def process_education_dataframe(
     df: pd.DataFrame, column_map: Dict[str, str], year: int
 ) -> pd.DataFrame:
-    """Process individual housing dataframe."""
+    """Process individual education dataframe."""
     columns = list(column_map.keys()) + COMMON_COLUMNS
     processed_df = df[columns].rename(columns=column_map)
 
@@ -120,16 +115,16 @@ def main():
     PATHS["processed"].mkdir(parents=True, exist_ok=True)
 
     # Load and process data
-    housing_data = load_and_process_housing_data()
+    education_data = load_and_process_education_data()
     population_data = load_population_data()
 
     # Merge datasets
     merged_data = pd.merge(
-        housing_data, population_data, on=["COUNTY_FIPS", "Year"], how="left"
+        education_data, population_data, on=["COUNTY_FIPS", "Year"], how="left"
     )
 
     # Save final output
-    output_path = PATHS["processed"] / "cleaned_housing_data.csv"
+    output_path = PATHS["processed"] / "cleaned_education_data.csv"
     merged_data.to_csv(output_path, index=False)
     print(f"Data successfully saved to {output_path}")
 
