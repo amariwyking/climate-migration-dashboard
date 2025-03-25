@@ -1,7 +1,9 @@
 # Environment files
 .venv
 .env
+.env.prod
 
 # Directories
 data
 __pycache__
+certs

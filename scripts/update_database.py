@@ -1,15 +1,10 @@
 import os
 from pathlib import Path
 import pandas as pd
-from sqlalchemy import create_engine
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+from helpers import get_db_connection
 
-# Database connection
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
+db_con = get_db_connection()
 
 
 def upload_csvs_to_postgres(folder_path: str, schema: str = "public") -> None:
@@ -33,7 +28,7 @@ def upload_csvs_to_postgres(folder_path: str, schema: str = "public") -> None:
                 # Upload to PostgreSQL
                 df.to_sql(
                     name=table_name,
-                    con=engine,
+                    con=db_con,
                     schema=schema,
                     if_exists="replace",  # Overwrite existing data
                     index=False,
