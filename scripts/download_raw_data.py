@@ -31,28 +31,31 @@ CONFIG = {
         "EDUCATION": {
             "DATASET": "acs/acs5",
             "YEARS": (2011, 2023),
-            "VARIABLES": {
-                (2011, 2023): [
-                    "B23006_001E",
-                    "B23006_002E",
-                    "B23006_009E",
-                    "B23006_016E",
-                    "B23006_023E",
-                    "B14001_001E",
-                    "B14001_002E",
-                    "B14001_003E",
-                    "B14001_004E",
-                    "B14001_005E",
-                    "B14001_006E",
-                    "B14001_007E",
-                    "B14001_008E",
-                    "B14001_009E",
-                    "B23006_007E",
-                    "B23006_014E",
-                    "B23006_021E",
-                    "B23006_028E",
-                ]
-            },
+            "VARIABLE": [
+                "B23006_001E",
+                "B23006_002E",
+                "B23006_009E",
+                "B23006_016E",
+                "B23006_023E",
+                "B14001_001E",
+                "B14001_002E",
+                "B14001_003E",
+                "B14001_004E",
+                "B14001_005E",
+                "B14001_006E",
+                "B14001_007E",
+                "B14001_008E",
+                "B14001_009E",
+                "B23006_007E",
+                "B23006_014E",
+                "B23006_021E",
+                "B23006_028E",
+            ],
+        },
+        "ECONOMIC": {
+            "DATASET": "acs/acs5",
+            "YEARS": (2011, 2023),
+            "VARIABLE": ["B19301_001E", "B23025_004E", "B23025_005E", "B23025_003E"],
         },
     },
     "MAX_WORKERS": min(32, (os.cpu_count() or 1) + 4),  # Optimized concurrency
@@ -97,7 +100,9 @@ class CensusDataDownloader:
         """Dynamically get variables based on year and dataset"""
         dataset_config = CONFIG["DATASETS"][dataset]
 
-        if "VARIABLE" in dataset_config:  # Single variable datasets
+        if isinstance(dataset_config["VARIABLE"], list):  # Multiple variables
+            return ["NAME"] + dataset_config["VARIABLE"]
+        elif isinstance(dataset_config["VARIABLE"], str):  # Single variable
             return ["NAME", dataset_config["VARIABLE"]]
 
         for (start, end), variables in dataset_config["VARIABLES"].items():

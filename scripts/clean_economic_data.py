@@ -6,30 +6,16 @@ from typing import Dict
 # Configuration constants
 PATHS = {
     "processed": Path("./data/processed/cleaned_data"),
-    "raw_education": Path("./data/raw/education_data"),
+    "raw_economic": Path("./data/raw/economic_data"),
     "raw_population": Path("./data/raw/population_data"),
 }
 
-EDUCATION_DATA_COLUMN_MAPPINGS = {
+ECONOMIC_DATA_COLUMN_MAPPINGS = {
     (2011, 2023): {
-        "B23006_001E": "TOTAL_POPULATION_25_64",
-        "B23006_002E": "LESS_THAN_HIGH_SCHOOL_TOTAL",
-        "B23006_009E": "HIGH_SCHOOL_GRADUATE_TOTAL",
-        "B23006_016E": "SOME_COLLEGE_TOTAL",
-        "B23006_023E": "BACHELOR_OR_HIGH_TOTAL",
-        "B14001_001E": "TOTAL",
-        "B14001_002E": "Enrolled",
-        "B14001_003E": "ENROLLED_NURSERY_PRESCOOL",
-        "B14001_004E": "ENROLLED_KINDERGARTEN",
-        "B14001_005E": "ENROLLED_GRADE1_4",
-        "B14001_006E": "ENROLLED_GRADE5_8",
-        "B14001_007E": "ENROLLED_GRADE9_12",
-        "B14001_008E": "ENROLLED_COLLEGE_UNDERGRAD",
-        "B14001_009E": "ENROLLED_GRADUATE_PROFESSIONAL",
-        "B23006_007E": "LESS_THAN_HIGH_SCHOOL_UNEMPLOYED",
-        "B23006_014E": "HIGH_SCHOOL_GRADUATE_UNEMPLOYED",
-        "B23006_021E": "SOME_COLLEGE_UNEMLOYED",
-        "B23006_028E": "BACHELOR_OR_HIGH_UNEMPLOYED",
+        "B19301_001E": "MEDIAN INCOME",
+        "B23025_004E": "TOTAL EMPLOYED POPULATION",
+        "B23025_005E": "UNEMPLOYED PERSONS",
+        "B23025_003E": "TOTAL LABOR FORCE",
     }
 }
 
@@ -43,11 +29,11 @@ def get_year_from_filename(filename: str) -> int:
     return int(match.group(1)) if match else None
 
 
-def load_and_process_education_data() -> pd.DataFrame:
+def load_and_process_economic_data() -> pd.DataFrame:
     """Load and process school attainment data from raw CSV files."""
     all_dfs = []
 
-    for file in PATHS["raw_education"].iterdir():
+    for file in PATHS["raw_economic"].iterdir():
         if not file.is_file() or file.suffix != ".csv":
             continue
 
@@ -62,7 +48,7 @@ def load_and_process_education_data() -> pd.DataFrame:
                 for (
                     start,
                     end,
-                ), mapping in EDUCATION_DATA_COLUMN_MAPPINGS.items()
+                ), mapping in ECONOMIC_DATA_COLUMN_MAPPINGS.items()
                 if start <= year <= end
             ),
             None,
@@ -72,13 +58,13 @@ def load_and_process_education_data() -> pd.DataFrame:
 
         # Read and process data
         df = pd.read_csv(file, skiprows=[1], dtype=str, low_memory=False)
-        df = process_education_dataframe(df, column_map, year)
+        df = process_economic_dataframe(df, column_map, year)
         all_dfs.append(df)
 
     return pd.concat(all_dfs, ignore_index=True) if all_dfs else pd.DataFrame()
 
 
-def process_education_dataframe(
+def process_economic_dataframe(
     df: pd.DataFrame, column_map: Dict[str, str], year: int
 ) -> pd.DataFrame:
     """Process individual school attainment dataframe."""
@@ -94,6 +80,11 @@ def process_education_dataframe(
     processed_df[numeric_cols] = processed_df[numeric_cols].apply(
         pd.to_numeric, errors="coerce"
     )
+
+    # Calculate UNEMPLOYMENT RATE
+    processed_df["UNEMPLOYMENT RATE"] = (
+        (processed_df["UNEMPLOYED PERSONS"] / processed_df["TOTAL LABOR FORCE"]) * 100
+    ).round(2)
 
     return processed_df.drop(columns=COMMON_COLUMNS)
 
@@ -131,16 +122,16 @@ def main():
     PATHS["processed"].mkdir(parents=True, exist_ok=True)
 
     # Load and process data
-    education_data = load_and_process_education_data()
+    economic_data = load_and_process_economic_data()
     population_data = load_population_data()
 
     # Merge datasets
     merged_data = pd.merge(
-        education_data, population_data, on=["COUNTY_FIPS", "Year"], how="left"
+        economic_data, population_data, on=["COUNTY_FIPS", "Year"], how="left"
     )
 
     # Save final output
-    output_path = PATHS["processed"] / "cleaned_education_data.csv"
+    output_path = PATHS["processed"] / "cleaned_economic_data.csv"
     merged_data.to_csv(output_path, index=False)
     print(f"Data successfully saved to {output_path}")
 
