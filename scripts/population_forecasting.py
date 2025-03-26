@@ -14,10 +14,10 @@ def main():
     # Census 2065 population projection for the US
     census_national_population_2065 = 366207000
 
-    state_names = pd.read_csv("./data/raw/population_data/state_names.csv")
+    state_names = pd.read_csv("./data/raw/metadata/state_names.csv")
 
     us_county_data = pd.read_csv(
-        "./data/raw/population_data/us_county_population_data_2010.csv"
+        "./data/raw/population_data/census_population_data_2010.csv"
     )
 
     # Rename columns
