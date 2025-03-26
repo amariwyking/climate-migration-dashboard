@@ -97,18 +97,24 @@ class CensusDataDownloader:
         return list(range(year_range[0], year_range[1] + 1))
 
     def _get_variables_for_year(self, dataset: str, year: int) -> List[str]:
-        """Dynamically get variables based on year and dataset"""
+        """Dynamically get variables based on year and dataset with flexible configuration"""
         dataset_config = CONFIG["DATASETS"][dataset]
 
-        if isinstance(dataset_config["VARIABLE"], list):  # Multiple variables
-            return ["NAME"] + dataset_config["VARIABLE"]
-        elif isinstance(dataset_config["VARIABLE"], str):  # Single variable
-            return ["NAME", dataset_config["VARIABLE"]]
+        # Check if dataset has a nested VARIABLES dictionary
+        if "VARIABLES" in dataset_config:
+            for (start, end), variables in dataset_config["VARIABLES"].items():
+                if start <= year <= end:
+                    return ["NAME"] + variables
+            raise ValueError(f"No variables defined for {dataset} in {year}")
 
-        for (start, end), variables in dataset_config["VARIABLES"].items():
-            if start <= year <= end:
-                return ["NAME"] + variables
-        raise ValueError(f"No variables defined for {dataset} in {year}")
+        # Check if dataset has a single VARIABLE key (string or list)
+        if "VARIABLE" in dataset_config:
+            if isinstance(dataset_config["VARIABLE"], list):  # Multiple variables
+                return ["NAME"] + dataset_config["VARIABLE"]
+            elif isinstance(dataset_config["VARIABLE"], str):  # Single variable
+                return ["NAME", dataset_config["VARIABLE"]]
+
+        raise ValueError(f"Invalid variable configuration for {dataset}")
 
     def _download_single_dataset_year(self, dataset: str, year: int) -> None:
         """Download a single dataset for a specific year"""
