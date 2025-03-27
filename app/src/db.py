@@ -16,16 +16,32 @@ class Table(Enum):
     POPULATION_HISTORY = "timeseries_population"
     POPULATION_PROJECTIONS = "county_population_projections"  
 
-load_dotenv()  # Load environment variables from .env file
+# Load environment-specific .env file
+ENVIRONMENT = os.getenv(
+    "ENVIRONMENT", "dev"
+)  # Default to dev, change to prod when deploying
+env_file = f".env.{ENVIRONMENT}" if ENVIRONMENT != "dev" else ".env"
+load_dotenv(env_file)
+
+# Fix Heroku connection string
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Set SSL mode based on environment
+SSL_MODE = "require" if ENVIRONMENT == "prod" else "disable"
+
 
 def get_db_connection():
     """Create and return a PostgreSQL database connection"""
     try:
-        engine = create_engine(os.getenv("DATABASE_URL"))
+        engine = create_engine(
+            DATABASE_URL.replace("postgres://", "postgresql://", 1),
+            connect_args={"sslmode": SSL_MODE},
+        )
         conn = engine.connect()
         return conn
     except Exception as e:
         raise Exception(f"Database connection failed: {str(e)}")
+
 
 
 def get_population_projections_by_fips(conn, county_fips=None):
