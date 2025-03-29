@@ -12,12 +12,32 @@ def main():
     OUTPUT_FILE = output_data_dir / f"county_population_projections.csv"
 
     # Census 2065 population projection for the US
-    census_national_population_2065 = 366207000
+    CENSUS_POP_2065 = 366207000
+    
+    QUERY_YEAR = 2010
 
-    state_names = pd.read_csv("./data/raw/metadata/state_names.csv")
+    # Download the names of the states
+    state_names = ced.download(
+        dataset=ACS5,
+        vintage=QUERY_YEAR,
+        state='*',
+        download_variables=['NAME'],
+    )
 
-    us_county_data = pd.read_csv(
-        "./data/raw/population_data/census_population_data_2010.csv"
+    # Remove states that are not contiguous and locations that are not official states
+    excluded_locations = ['District of Columbia',
+                          'Alaska', 'Hawaii', 'Puerto Rico']
+    contiguous_states = state_names[~state_names['NAME'].isin(
+        excluded_locations)]['STATE']
+
+    # Pull 2010 population data for counties in the contiguous United States
+    us_county_data = ced.download(
+        dataset=ACS5,
+        vintage=QUERY_YEAR,
+        download_variables=['NAME', 'B01003_001E'],
+        state=contiguous_states,
+        county='*',
+        with_geometry=True,
     )
 
     # Rename columns
@@ -147,7 +167,7 @@ def main():
     climate_region_populations["POPULATION_2065_S3"] = (
         qf_2065_regional_population_shares["Scenario_3"]
         .divide(100)
-        .multiply(census_national_population_2065)
+        .multiply(CENSUS_POP_2065)
         .astype(int)
     )
 
@@ -181,7 +201,7 @@ def main():
 
     # Add scenario population projections to climate regions dataframe
     climate_region_populations = climate_region_populations.merge(
-        alternate_scenario_5_pop_shares.mul(census_national_population_2065).astype(
+        alternate_scenario_5_pop_shares.mul(CENSUS_POP_2065).astype(
             int
         ),
         left_index=True,
