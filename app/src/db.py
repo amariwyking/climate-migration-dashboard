@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from enum import Enum
 
 class Table(Enum):
+    # County table
+    COUNTY_METADATA = "county"
+    
     # Housing related tables
     MEDIAN_GROSS_RENT = "timeseries_median_gross_rent"
     MEDIAN_HOUSE_VALUE = "timeseries_median_house_value"
