@@ -1,5 +1,6 @@
 #!/bin/bash
 
+python scripts/download_counties.py && \
 python scripts/download_raw_data.py && \
 python scripts/population_forecasting.py && \
 python scripts/clean_data.py && \
