@@ -132,19 +132,19 @@ def display_housing_analysis(county_name, state_name, county_fips, db_conn):
     st.header('Housing Analysis', divider=True)
 
     st.write(f"### Median Gross Rent for {county_name}, {state_name}")
-    st.line_chart(db.get_county_data_table(
+    st.line_chart(db.get_county_timeseries_data(
         db_conn, db.Table.MEDIAN_GROSS_RENT, county_fips=county_fips))
 
     st.write(f"### Median House Value for {county_name}, {state_name}")
-    st.line_chart(db.get_county_data_table(
+    st.line_chart(db.get_county_timeseries_data(
         db_conn, db.Table.MEDIAN_HOUSE_VALUE, county_fips=county_fips))
 
     st.write(f"### Total Housing Units for {county_name}, {state_name}")
-    st.line_chart(db.get_county_data_table(
+    st.line_chart(db.get_county_timeseries_data(
         db_conn, db.Table.TOTAL_HOUSING_UNITS, county_fips=county_fips))
 
     st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
-    st.line_chart(db.get_county_data_table(
+    st.line_chart(db.get_county_timeseries_data(
         db_conn, db.Table.OCCUPIED_HOUSING_UNITS, county_fips=county_fips))
 
 

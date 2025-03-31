@@ -159,9 +159,9 @@ def get_timeseries_median_gross_rent(conn, county_fips=None):
         st.error(f"Error loading historical population counts: {str(e)}")
         st.stop()
 
-def get_county_data_table(conn, table_name, county_fips=None):
+def get_county_timeseries_data(conn, table_name, county_fips=None):
     """
-    Get time series data for median gross rent for the specified county by FIPS code
+    Get county time series data from the specified table
     
     Parameters:
     -----------
