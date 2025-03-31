@@ -192,3 +192,40 @@ def get_county_data_table(conn, table_name, county_fips=None):
     except Exception as e:
         st.error(f"Error loading historical population counts: {str(e)}")
         st.stop()
+        
+def get_county_metadata(conn, county_fips=None):
+    """
+    Get county time series data from the specified table
+    
+    Parameters:
+    -----------
+    conn : database connection
+        PostgreSQL database connection
+    table_name : SQL table name
+        Name of the table to query in the database.
+    county_fips : int or list, optional
+        County FIPS code(s) to query. If None, returns all counties.
+    
+    Returns:
+    --------
+    df : pandas.DataFrame
+        DataFrame containing population projection data
+    """
+    try:
+        query = f"SELECT * FROM {Table.COUNTY_METADATA.value}"
+        
+        # Add COUNTY_FIPS filter if provided
+        if county_fips is not None:
+            if isinstance(county_fips, list):
+                fips_list = ", ".join(str(fips) for fips in county_fips)
+                query += f" WHERE \"COUNTY_FIPS\" IN ({fips_list})"
+            else:
+                query += f" WHERE \"COUNTY_FIPS\" = {county_fips}"
+        
+        # Execute query and return as DataFrame
+        df = pd.read_sql(query, conn).set_index("COUNTY_FIPS")
+            
+        return df
+    except Exception as e:
+        st.error(f"Error loading county data counts: {str(e)}")
+        st.stop()
