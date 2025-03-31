@@ -133,27 +133,32 @@ def display_housing_analysis(county_name, state_name, county_fips, db_conn):
 
     st.write(f"### Median Gross Rent for {county_name}, {state_name}")
     st.line_chart(db.get_county_timeseries_data(
-        db_conn, db.Table.MEDIAN_GROSS_RENT, county_fips=county_fips))
+        db_conn, db.Table.COUNTY_HOUSING_DATA, "MEDIAN_GROSS_RENT", county_fips=county_fips))
 
     st.write(f"### Median House Value for {county_name}, {state_name}")
     st.line_chart(db.get_county_timeseries_data(
-        db_conn, db.Table.MEDIAN_HOUSE_VALUE, county_fips=county_fips))
+        db_conn, db.Table.COUNTY_HOUSING_DATA, "MEDIAN_HOUSING_VALUE", county_fips=county_fips))
 
     st.write(f"### Total Housing Units for {county_name}, {state_name}")
     st.line_chart(db.get_county_timeseries_data(
-        db_conn, db.Table.TOTAL_HOUSING_UNITS, county_fips=county_fips))
+        db_conn, db.Table.COUNTY_HOUSING_DATA, "TOTAL_HOUSING_UNITS", county_fips=county_fips))
 
     st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
     st.line_chart(db.get_county_timeseries_data(
-        db_conn, db.Table.OCCUPIED_HOUSING_UNITS, county_fips=county_fips))
+        db_conn, db.Table.COUNTY_HOUSING_DATA, "OCCUPIED_HOUSING_UNTIS", county_fips=county_fips))
 
 
 st.header('Climate Migration Dashboard')
 
+# Get the database connection
+db_conn = db.get_db_connection()
+
+counties = db.get_county_metadata(db_conn)
+
 # TODO: Can we package the county name and FIPS code in the selectbox?
 county = st.selectbox(
     'Select a county',
-    utils.get_all_county_names(),
+    counties.NAME,
     placeholder='Type to search...',
     index=None
 )
@@ -164,13 +169,10 @@ if county:
     county_name, state_name = county.split(', ')
 
     # Ensure that the final form of the FIPS code is 5 digits
-    county_fips = str(utils.get_county_fips_code(county)).zfill(5)
+    county_fips = str(counties[counties.NAME == county].index[0]).zfill(5)
 
 else:
     county_name = state_name = county_fips = None
-
-# Get the database connection
-db_conn = db.get_db_connection()
 
 if county_fips:
     population_historical = db.get_population_timeseries(

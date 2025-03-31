@@ -9,7 +9,10 @@ class Table(Enum):
     # County table
     COUNTY_METADATA = "county"
     
-    # Housing related tables
+    COUNTY_HOUSING_DATA = "cleaned_housing_data"
+    COUNTY_ECONOMIC_DATA = "cleaned_economic_data"
+    COUNTY_EDUCATION_DATA = "cleaned_education_data"
+    
     MEDIAN_GROSS_RENT = "timeseries_median_gross_rent"
     MEDIAN_HOUSE_VALUE = "timeseries_median_house_value"
     OCCUPIED_HOUSING_UNITS = "timeseries_occupied_housing_units"
@@ -17,7 +20,7 @@ class Table(Enum):
     
     # Population related tables
     POPULATION_HISTORY = "timeseries_population"
-    POPULATION_PROJECTIONS = "county_population_projections"  
+    POPULATION_PROJECTIONS = "county_population_projections"
 
 # Load environment-specific .env file
 ENVIRONMENT = os.getenv(
@@ -76,12 +79,6 @@ def get_population_projections_by_fips(conn, county_fips=None):
         
         # Execute query and return as DataFrame
         df = pd.read_sql(query, conn)
-        
-        # Set COUNTY_FIPS as the index
-        # if not df.empty:
-            # df.set_index('COUNTY_FIPS', inplace=True)
-            
-            # print(df)
             
         return df
     except Exception as e:
@@ -156,10 +153,10 @@ def get_timeseries_median_gross_rent(conn, county_fips=None):
             
         return df.T
     except Exception as e:
-        st.error(f"Error loading historical population counts: {str(e)}")
+        st.error(f"Error loading historical median gross rent: {str(e)}")
         st.stop()
 
-def get_county_timeseries_data(conn, table_name, county_fips=None):
+def get_county_timeseries_data(conn, table: Table, indicator_name, county_fips):
     """
     Get county time series data from the specified table
     
@@ -167,8 +164,10 @@ def get_county_timeseries_data(conn, table_name, county_fips=None):
     -----------
     conn : database connection
         PostgreSQL database connection
-    table_name : SQL table name
-        Name of the table to query in the database.
+    table : SQL table to be queried
+        Enum for the table to query in the database.
+    indicator_name : Indicator name
+        Name of the indicator to pull from the table.
     county_fips : int or list, optional
         County FIPS code(s) to query. If None, returns all counties.
     
@@ -177,8 +176,10 @@ def get_county_timeseries_data(conn, table_name, county_fips=None):
     df : pandas.DataFrame
         DataFrame containing population projection data
     """
+    table_name = table.value
+    
     try:
-        query = f"SELECT * FROM {table_name.value}"
+        query = f"SELECT {table_name}.\"Year\", \"{indicator_name}\" FROM {table_name}"
         
         # Add COUNTY_FIPS filter if provided
         if county_fips is not None:
@@ -187,13 +188,18 @@ def get_county_timeseries_data(conn, table_name, county_fips=None):
                 query += f" WHERE \"COUNTY_FIPS\" IN ({fips_list})"
             else:
                 query += f" WHERE \"COUNTY_FIPS\" = {county_fips}"
+                
+        query += f" ORDER BY {table_name}.\"Year\" ASC"
         
         # Execute query and return as DataFrame
-        df = pd.read_sql(query, conn).set_index("COUNTY_FIPS")
+        df = pd.read_sql(query, conn)
+        
+        df.Year = pd.to_datetime(df.Year, format='%Y').dt.year
+        df = df.set_index("Year")
             
-        return df.T
+        return df
     except Exception as e:
-        st.error(f"Error loading historical population counts: {str(e)}")
+        st.error(f"Error loading time series data: {str(e)}")
         st.stop()
         
 def get_county_metadata(conn, county_fips=None):
@@ -204,15 +210,13 @@ def get_county_metadata(conn, county_fips=None):
     -----------
     conn : database connection
         PostgreSQL database connection
-    table_name : SQL table name
-        Name of the table to query in the database.
     county_fips : int or list, optional
         County FIPS code(s) to query. If None, returns all counties.
     
     Returns:
     --------
     df : pandas.DataFrame
-        DataFrame containing population projection data
+        DataFrame containing county metadata
     """
     try:
         query = f"SELECT * FROM {Table.COUNTY_METADATA.value}"
