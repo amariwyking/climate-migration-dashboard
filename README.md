@@ -10,5 +10,5 @@
 6. Run `docker-compose up -d` to run container and `docker-compose down` to stop container when done with project.
 7. Create an .env and file and add your `US_CENSUS_API_KEY` and postgresSQL `DATABASE_URL` to it.
 8. Create directory and txt file to save postgress password `secrets\postgres_passwod.txt`.
-9. Run `.\pipeline.bat`.
-10. For dashboard Run `streamlit run dashboard/app.py`.
+9. Run `.\scripts\pipeline.bat` for Windows or `./scripts/pipeline.sh` for MacOS & Linux.
+10. To start the dashboard, run `streamlit run ./climate_migration/app/main.py`.

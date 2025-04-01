@@ -64,4 +64,4 @@ counties = counties.rename(columns={
 })
 
 # Export the population columns indexed by COUNTY_FIPS
-counties.to_csv(DATA_DIR / "processed/cleaned_data/timeseries_population.csv")
+counties.to_csv(DATA_DIR / "preprocessed/cleaned_data/timeseries_population.csv")
