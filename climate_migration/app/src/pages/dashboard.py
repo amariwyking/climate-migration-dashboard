@@ -161,7 +161,7 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
     some_college_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
     bachelors_higher_df = db.get_county_timeseries_data(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELOR_OR_HIGH_TOTAL", county_fips=county_fips)
+        db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
     total_pop_25_64_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "TOTAL_POPULATION_25_64", county_fips=county_fips)
     
@@ -171,14 +171,14 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
     final_df["LESS_THAN_HIGH_SCHOOL_TOTAL"] = less_than_hs_df.values
     final_df["HIGH_SCHOOL_GRADUATE_TOTAL"] = hs_graduate_df.values
     final_df["SOME_COLLEGE_TOTAL"] = some_college_df.values
-    final_df["BACHELOR_OR_HIGH_TOTAL"] = bachelors_higher_df.values
+    final_df["BACHELORS_OR_HIGHER_TOTAL"] = bachelors_higher_df.values
     final_df["TOTAL_POPULATION_25_64"] = total_pop_25_64_df.values
     
     # Calculate percentages
     final_df["LessThanHighSchool_Perc"] = (final_df["LESS_THAN_HIGH_SCHOOL_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
     final_df["HighSchoolGraduate_Perc"] = (final_df["HIGH_SCHOOL_GRADUATE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
     final_df["SomeCollege_Perc"] = (final_df["SOME_COLLEGE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
-    final_df["BachelorsOrHigher_Perc"] = (final_df["BACHELOR_OR_HIGH_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    final_df["BachelorsOrHigher_Perc"] = (final_df["BACHELORS_OR_HIGHER_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
     
     # Create a title for the chart
     st.write(f"### School Attainment Rate vs. Total Workforce in {county_name}, {state_name}")
