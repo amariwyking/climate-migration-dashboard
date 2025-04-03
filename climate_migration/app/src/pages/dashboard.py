@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import src.utils as utils
 import src.db as db
 
@@ -128,7 +130,7 @@ def display_migration_impact_analysis(projections_dict):
     # """)
 
 
-def display_housing_analysis(county_name, state_name, county_fips, db_conn):
+def display_housing_indicators(county_name, state_name, county_fips, db_conn):
     st.header('Housing Analysis', divider=True)
 
     st.write(f"### Median Gross Rent for {county_name}, {state_name}")
@@ -146,6 +148,106 @@ def display_housing_analysis(county_name, state_name, county_fips, db_conn):
     st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
     st.line_chart(db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_HOUSING_DATA, "OCCUPIED_HOUSING_UNTIS", county_fips=county_fips))
+
+
+def display_education_indicators(county_name, state_name, county_fips, db_conn):
+    st.header('Education Analysis', divider=True)
+    
+    # Retrieve all the educational attainment data needed for the chart
+    less_than_hs_df = db.get_county_timeseries_data(
+        db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
+    hs_graduate_df = db.get_county_timeseries_data(
+        db_conn, db.Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_TOTAL", county_fips=county_fips)
+    some_college_df = db.get_county_timeseries_data(
+        db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
+    bachelors_higher_df = db.get_county_timeseries_data(
+        db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELOR_OR_HIGH_TOTAL", county_fips=county_fips)
+    total_pop_25_64_df = db.get_county_timeseries_data(
+        db_conn, db.Table.COUNTY_EDUCATION_DATA, "TOTAL_POPULATION_25_64", county_fips=county_fips)
+    
+    # Combine all dataframes into one
+    final_df = pd.DataFrame()
+    final_df["Year"] = less_than_hs_df.index
+    final_df["LESS_THAN_HIGH_SCHOOL_TOTAL"] = less_than_hs_df.values
+    final_df["HIGH_SCHOOL_GRADUATE_TOTAL"] = hs_graduate_df.values
+    final_df["SOME_COLLEGE_TOTAL"] = some_college_df.values
+    final_df["BACHELOR_OR_HIGH_TOTAL"] = bachelors_higher_df.values
+    final_df["TOTAL_POPULATION_25_64"] = total_pop_25_64_df.values
+    
+    # Calculate percentages
+    final_df["LessThanHighSchool_Perc"] = (final_df["LESS_THAN_HIGH_SCHOOL_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    final_df["HighSchoolGraduate_Perc"] = (final_df["HIGH_SCHOOL_GRADUATE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    final_df["SomeCollege_Perc"] = (final_df["SOME_COLLEGE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    final_df["BachelorsOrHigher_Perc"] = (final_df["BACHELOR_OR_HIGH_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    
+    # Create a title for the chart
+    st.write(f"### School Attainment Rate vs. Total Workforce in {county_name}, {state_name}")
+    
+    # Since Streamlit doesn't natively support dual-axis charts, we'll use Plotly
+    
+    
+    # Create a figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    
+    # Add traces for educational attainment percentages (left y-axis)
+    fig.add_trace(
+        go.Scatter(x=final_df["Year"], y=final_df["LessThanHighSchool_Perc"], 
+                   mode="lines+markers", name="Less than High School (%)",
+                   marker=dict(symbol="circle")),
+        secondary_y=False
+    )
+    
+    fig.add_trace(
+        go.Scatter(x=final_df["Year"], y=final_df["HighSchoolGraduate_Perc"], 
+                   mode="lines+markers", name="High School Graduate (%)",
+                   marker=dict(symbol="square")),
+        secondary_y=False
+    )
+    
+    fig.add_trace(
+        go.Scatter(x=final_df["Year"], y=final_df["SomeCollege_Perc"], 
+                   mode="lines+markers", name="Some College or Associate's Degree (%)",
+                   marker=dict(symbol="triangle-up")),
+        secondary_y=False
+    )
+    
+    fig.add_trace(
+        go.Scatter(x=final_df["Year"], y=final_df["BachelorsOrHigher_Perc"], 
+                   mode="lines+markers", name="Bachelor's Degree or Higher (%)",
+                   marker=dict(symbol="diamond")),
+        secondary_y=False
+    )
+    
+    # Add trace for total population (right y-axis)
+    fig.add_trace(
+        go.Scatter(x=final_df["Year"], y=final_df["TOTAL_POPULATION_25_64"], 
+                   mode="lines+markers", name="Total Population (25-64)",
+                   line=dict(dash="dash", color="black"),
+                   marker=dict(symbol="star", color="black")),
+        secondary_y=True
+    )
+    
+    # Set axis titles
+    fig.update_xaxes(title_text="Year")
+    fig.update_yaxes(title_text="Percentage of Population (25-64)", secondary_y=False)
+    fig.update_yaxes(title_text="Total Population (25-64)", secondary_y=True)
+    
+    fig.update_layout(
+        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)'),
+        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)'),
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="bottom",
+            y=-0.3,  # Position below the plot
+            xanchor="center",
+            x=0.5    # Center the legend horizontally
+        ),
+        margin=dict(l=40, r=40, t=40, b=100),  # Increased bottom margin to accommodate legend
+        autosize=True,
+    )
+    
+    # Display the chart
+    st.plotly_chart(fig, use_container_width=True)
 
 
 st.header('Climate Migration Dashboard')
@@ -186,6 +288,8 @@ if county_fips:
         display_population_projections(
             county_name, state_name, county_fips, population_historical, population_projections)
 
-    display_housing_analysis(county_name, state_name, county_fips, db_conn)
+    display_housing_indicators(county_name, state_name, county_fips, db_conn)
+    
+    display_education_indicators(county_name, state_name, county_fips, db_conn)
 else:
     st.info("Please select a county to view population projections.")
