@@ -22,7 +22,7 @@ def upload_csvs_to_postgres(folder_path: str, schema: str = "public") -> None:
             filepath = os.path.join(folder_path, filename)
 
             # Read CSV
-            df = pd.read_csv(filepath)
+            df = pd.read_csv(filepath, dtype={'COUNTY_FIPS': str})
 
             try:
                 # Upload to PostgreSQL
