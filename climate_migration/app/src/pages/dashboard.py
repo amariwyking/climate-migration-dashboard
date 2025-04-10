@@ -9,8 +9,7 @@ import src.db as db
 def display_population_projections(county_name, state_name, county_fips, population_historical, population_projections):
     st.write(f"### Population Projections for {county_name}, {state_name}")
 
-    county_pop_historical = population_historical[population_historical['COUNTY_FIPS'] == int(
-        county_fips)]
+    county_pop_historical = population_historical[population_historical['COUNTY_FIPS'] == county_fips]
 
     # If the county has multiple rows of data, select the row with the most complete data
     if county_pop_historical.shape[0] > 1:
@@ -22,8 +21,7 @@ def display_population_projections(county_name, state_name, county_fips, populat
 
         county_pop_historical = county_pop_historical.loc[min_missing_idx]
 
-    county_pop_projections = population_projections[population_projections['COUNTY_FIPS'] == int(
-        county_fips)]
+    county_pop_projections = population_projections[population_projections['COUNTY_FIPS'] == county_fips]
 
     # TODO: Rewrite to work with any number of scenarios that are included in the projections
     scenarios = [
@@ -77,7 +75,7 @@ def display_migration_impact_analysis(projections_dict):
         "Scenario S5a": "Medium",
         "Scenario S5c": "High"
     }
-    
+
     # Add scenario selection dropdown
     st.write("### Impact Analysis")
     selected_scenario = st.selectbox(
@@ -100,7 +98,7 @@ def display_migration_impact_analysis(projections_dict):
         (additional_residents / baseline_pop_2065) * 100, 1)
 
     # Determine impact level based on selected scenario
-    
+
     impact_level = impact_map.get(selected_scenario, "Unknown Impact")
 
     # Create columns for metrics display
@@ -152,7 +150,7 @@ def display_housing_indicators(county_name, state_name, county_fips, db_conn):
 
 def display_education_indicators(county_name, state_name, county_fips, db_conn):
     st.header('Education Analysis', divider=True)
-    
+
     # Retrieve all the educational attainment data needed for the chart
     less_than_hs_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
@@ -164,7 +162,7 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
     total_pop_25_64_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "TOTAL_POPULATION_25_64", county_fips=county_fips)
-    
+
     # Combine all dataframes into one
     final_df = pd.DataFrame()
     final_df["Year"] = less_than_hs_df.index
@@ -173,65 +171,70 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
     final_df["SOME_COLLEGE_TOTAL"] = some_college_df.values
     final_df["BACHELORS_OR_HIGHER_TOTAL"] = bachelors_higher_df.values
     final_df["TOTAL_POPULATION_25_64"] = total_pop_25_64_df.values
-    
+
     # Calculate percentages
-    final_df["LessThanHighSchool_Perc"] = (final_df["LESS_THAN_HIGH_SCHOOL_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
-    final_df["HighSchoolGraduate_Perc"] = (final_df["HIGH_SCHOOL_GRADUATE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
-    final_df["SomeCollege_Perc"] = (final_df["SOME_COLLEGE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
-    final_df["BachelorsOrHigher_Perc"] = (final_df["BACHELORS_OR_HIGHER_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
-    
+    final_df["LessThanHighSchool_Perc"] = (
+        final_df["LESS_THAN_HIGH_SCHOOL_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    final_df["HighSchoolGraduate_Perc"] = (
+        final_df["HIGH_SCHOOL_GRADUATE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    final_df["SomeCollege_Perc"] = (
+        final_df["SOME_COLLEGE_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+    final_df["BachelorsOrHigher_Perc"] = (
+        final_df["BACHELORS_OR_HIGHER_TOTAL"] / final_df["TOTAL_POPULATION_25_64"]) * 100
+
     # Create a title for the chart
-    st.write(f"### School Attainment Rate vs. Total Workforce in {county_name}, {state_name}")
-    
+    st.write(
+        f"### School Attainment Rate vs. Total Workforce in {county_name}, {state_name}")
+
     # Since Streamlit doesn't natively support dual-axis charts, we'll use Plotly
-    
-    
+
     # Create a figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    
+
     # Add traces for educational attainment percentages (left y-axis)
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["LessThanHighSchool_Perc"], 
+        go.Scatter(x=final_df["Year"], y=final_df["LessThanHighSchool_Perc"],
                    mode="lines+markers", name="Less than High School (%)",
                    marker=dict(symbol="circle")),
         secondary_y=False
     )
-    
+
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["HighSchoolGraduate_Perc"], 
+        go.Scatter(x=final_df["Year"], y=final_df["HighSchoolGraduate_Perc"],
                    mode="lines+markers", name="High School Graduate (%)",
                    marker=dict(symbol="square")),
         secondary_y=False
     )
-    
+
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["SomeCollege_Perc"], 
+        go.Scatter(x=final_df["Year"], y=final_df["SomeCollege_Perc"],
                    mode="lines+markers", name="Some College or Associate's Degree (%)",
                    marker=dict(symbol="triangle-up")),
         secondary_y=False
     )
-    
+
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["BachelorsOrHigher_Perc"], 
+        go.Scatter(x=final_df["Year"], y=final_df["BachelorsOrHigher_Perc"],
                    mode="lines+markers", name="Bachelor's Degree or Higher (%)",
                    marker=dict(symbol="diamond")),
         secondary_y=False
     )
-    
+
     # Add trace for total population (right y-axis)
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["TOTAL_POPULATION_25_64"], 
+        go.Scatter(x=final_df["Year"], y=final_df["TOTAL_POPULATION_25_64"],
                    mode="lines+markers", name="Total Population (25-64)",
                    line=dict(dash="dash", color="black"),
                    marker=dict(symbol="star", color="black")),
         secondary_y=True
     )
-    
+
     # Set axis titles
     fig.update_xaxes(title_text="Year")
-    fig.update_yaxes(title_text="Percentage of Population (25-64)", secondary_y=False)
+    fig.update_yaxes(
+        title_text="Percentage of Population (25-64)", secondary_y=False)
     fig.update_yaxes(title_text="Total Population (25-64)", secondary_y=True)
-    
+
     fig.update_layout(
         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)'),
         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)'),
@@ -242,16 +245,18 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
             xanchor="center",
             x=0.5    # Center the legend horizontally
         ),
-        margin=dict(l=40, r=40, t=40, b=100),  # Increased bottom margin to accommodate legend
+        # Increased bottom margin to accommodate legend
+        margin=dict(l=40, r=40, t=40, b=100),
         autosize=True,
     )
-    
+
     # Display the chart
     st.plotly_chart(fig, use_container_width=True)
 
+
 def display_unemployment_indicators(county_name, state_name, county_fips, db_conn):
     st.header('Unemployment Analysis', divider=True)
-    
+
     # Retrieve the unemployment data needed for the chart
     # Using the same pattern as your education function but with economic data table
     total_labor_force_df = db.get_county_timeseries_data(
@@ -260,52 +265,54 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
         db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYED PERSONS", county_fips=county_fips)
     unemployment_rate_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYMENT RATE", county_fips=county_fips)
-    
+
     # Combine all dataframes into one
     total_unemployment = pd.DataFrame()
     total_unemployment["Year"] = total_labor_force_df.index
     total_unemployment["TotalLaborForce"] = total_labor_force_df.values
     total_unemployment["TotalUnemployed"] = unemployed_persons_df.values
     total_unemployment["UnemploymentRate"] = unemployment_rate_df.values
-    
+
     # Create a title for the chart
-    st.write(f"### Total Labor Force, Unemployed Population, and Unemployment Rate (2011-2023) in {county_name}, {state_name}")
-    
+    st.write(
+        f"### Total Labor Force, Unemployed Population, and Unemployment Rate (2011-2023) in {county_name}, {state_name}")
+
     # Create a figure with secondary y-axis using Plotly
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    
+
     # Add trace for Total Labor Force (left y-axis)
     fig.add_trace(
-        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["TotalLaborForce"], 
+        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["TotalLaborForce"],
                    mode="lines+markers", name="Total Labor Force",
                    line=dict(color="blue"),
                    marker=dict(symbol="circle", color="blue")),
         secondary_y=False
     )
-    
+
     # Add trace for Total Unemployed (left y-axis)
     fig.add_trace(
-        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["TotalUnemployed"], 
+        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["TotalUnemployed"],
                    mode="lines+markers", name="Total Unemployed",
                    line=dict(color="red"),
                    marker=dict(symbol="square", color="red")),
         secondary_y=False
     )
-    
+
     # Add trace for Unemployment Rate (right y-axis)
     fig.add_trace(
-        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["UnemploymentRate"], 
+        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["UnemploymentRate"],
                    mode="lines+markers", name="Unemployment Rate (%)",
                    line=dict(dash="dash", color="green"),
                    marker=dict(symbol="triangle-up", color="green")),
         secondary_y=True
     )
-    
+
     # Set axis titles
     fig.update_xaxes(title_text="Year")
     fig.update_yaxes(title_text="Number of People", secondary_y=False)
-    fig.update_yaxes(title_text="Unemployment Rate (%)", secondary_y=True, color="green")
-    
+    fig.update_yaxes(title_text="Unemployment Rate (%)",
+                     secondary_y=True, color="green")
+
     # Update layout to match the matplotlib style
     fig.update_layout(
         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)'),
@@ -320,13 +327,14 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
         margin=dict(l=40, r=40, t=40, b=100),
         autosize=True,
     )
-    
+
     # Display the chart
     st.plotly_chart(fig, use_container_width=True)
 
+
 def display_unemployment_by_education(county_name, state_name, county_fips, db_conn):
     st.header('Unemployment by Education Level', divider=True)
-    
+
     # Retrieve raw counts for each education level - both unemployed and total population
     # Unemployed counts
     less_than_hs_unemployed_df = db.get_county_timeseries_data(
@@ -337,7 +345,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_UNEMPLOYED", county_fips=county_fips)
     bachelors_higher_unemployed_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_UNEMPLOYED", county_fips=county_fips)
-    
+
     # Total population counts
     less_than_hs_total_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
@@ -347,86 +355,87 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
     bachelors_higher_total_df = db.get_county_timeseries_data(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
-    
+
     # Combine all dataframes into one
     unemployment_by_edulevel = pd.DataFrame()
     unemployment_by_edulevel["Year"] = less_than_hs_unemployed_df.index
-    
+
     # Store raw counts
     unemployment_by_edulevel["LessThanHighSchool_Unemployed"] = less_than_hs_unemployed_df.values
     unemployment_by_edulevel["HighSchoolGraduate_Unemployed"] = hs_graduate_unemployed_df.values
     unemployment_by_edulevel["SomeCollege_Unemployed"] = some_college_unemployed_df.values
     unemployment_by_edulevel["BachelorsOrHigher_Unemployed"] = bachelors_higher_unemployed_df.values
-    
+
     unemployment_by_edulevel["LessThanHighSchool_Total"] = less_than_hs_total_df.values
     unemployment_by_edulevel["HighSchoolGraduate_Total"] = hs_graduate_total_df.values
     unemployment_by_edulevel["SomeCollege_Total"] = some_college_total_df.values
     unemployment_by_edulevel["BachelorsOrHigher_Total"] = bachelors_higher_total_df.values
-    
+
     # Calculate unemployment rates by dividing unemployed by total population
     unemployment_by_edulevel["LessThanHighSchool_UnemploymentRate"] = (
-        unemployment_by_edulevel["LessThanHighSchool_Unemployed"] / 
+        unemployment_by_edulevel["LessThanHighSchool_Unemployed"] /
         unemployment_by_edulevel["LessThanHighSchool_Total"] * 100
     )
-    
+
     unemployment_by_edulevel["HighSchoolGraduate_UnemploymentRate"] = (
-        unemployment_by_edulevel["HighSchoolGraduate_Unemployed"] / 
+        unemployment_by_edulevel["HighSchoolGraduate_Unemployed"] /
         unemployment_by_edulevel["HighSchoolGraduate_Total"] * 100
     )
-    
+
     unemployment_by_edulevel["SomeCollege_UnemploymentRate"] = (
-        unemployment_by_edulevel["SomeCollege_Unemployed"] / 
+        unemployment_by_edulevel["SomeCollege_Unemployed"] /
         unemployment_by_edulevel["SomeCollege_Total"] * 100
     )
-    
+
     unemployment_by_edulevel["BachelorsOrHigher_UnemploymentRate"] = (
-        unemployment_by_edulevel["BachelorsOrHigher_Unemployed"] / 
+        unemployment_by_edulevel["BachelorsOrHigher_Unemployed"] /
         unemployment_by_edulevel["BachelorsOrHigher_Total"] * 100
     )
-    
+
     # Create a title for the chart
-    st.write(f"### Unemployment Rate by Education Level (2011-2023) in {county_name}, {state_name}")
-    
+    st.write(
+        f"### Unemployment Rate by Education Level (2011-2023) in {county_name}, {state_name}")
+
     # Create a figure using Plotly
     fig = go.Figure()
-    
+
     # Add traces for each education level's unemployment rate
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"], 
-                  y=unemployment_by_edulevel["LessThanHighSchool_UnemploymentRate"],
-                  mode="lines+markers", 
-                  name="Less Than High School",
-                  marker=dict(symbol="circle"))
+        go.Scatter(x=unemployment_by_edulevel["Year"],
+                   y=unemployment_by_edulevel["LessThanHighSchool_UnemploymentRate"],
+                   mode="lines+markers",
+                   name="Less Than High School",
+                   marker=dict(symbol="circle"))
     )
-    
+
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"], 
-                  y=unemployment_by_edulevel["HighSchoolGraduate_UnemploymentRate"],
-                  mode="lines+markers", 
-                  name="High School Graduate",
-                  marker=dict(symbol="square"))
+        go.Scatter(x=unemployment_by_edulevel["Year"],
+                   y=unemployment_by_edulevel["HighSchoolGraduate_UnemploymentRate"],
+                   mode="lines+markers",
+                   name="High School Graduate",
+                   marker=dict(symbol="square"))
     )
-    
+
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"], 
-                  y=unemployment_by_edulevel["SomeCollege_UnemploymentRate"],
-                  mode="lines+markers", 
-                  name="Some College or Associate's Degree",
-                  marker=dict(symbol="triangle-up"))
+        go.Scatter(x=unemployment_by_edulevel["Year"],
+                   y=unemployment_by_edulevel["SomeCollege_UnemploymentRate"],
+                   mode="lines+markers",
+                   name="Some College or Associate's Degree",
+                   marker=dict(symbol="triangle-up"))
     )
-    
+
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"], 
-                  y=unemployment_by_edulevel["BachelorsOrHigher_UnemploymentRate"],
-                  mode="lines+markers", 
-                  name="Bachelor's Degree or Higher",
-                  marker=dict(symbol="diamond"))
+        go.Scatter(x=unemployment_by_edulevel["Year"],
+                   y=unemployment_by_edulevel["BachelorsOrHigher_UnemploymentRate"],
+                   mode="lines+markers",
+                   name="Bachelor's Degree or Higher",
+                   marker=dict(symbol="diamond"))
     )
-    
+
     # Set axis titles and layout
     fig.update_xaxes(title_text="Year")
     fig.update_yaxes(title_text="Unemployment Rate (%)")
-    
+
     fig.update_layout(
         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)'),
         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)'),
@@ -440,7 +449,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
         margin=dict(l=40, r=40, t=40, b=100),
         autosize=True,
     )
-    
+
     # Display the chart
     st.plotly_chart(fig, use_container_width=True)
 
