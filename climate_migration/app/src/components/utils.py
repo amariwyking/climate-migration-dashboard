@@ -1,3 +1,4 @@
+from typing import List
 import streamlit as st
 
 def vertical_spacer(n=1):
@@ -17,3 +18,13 @@ def vertical_spacer(n=1):
     
     # Use markdown to render the breaks
     st.markdown(breaks, unsafe_allow_html=True)
+    
+def split_row(left_component, right_component, ratio: List[int]):
+    col1, col2 = st.columns(ratio)
+    
+    with col1:
+        left_component()
+    with col2:
+        right_component()
+        
+    

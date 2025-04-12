@@ -1,9 +1,17 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import src.utils as utils
 import src.db as db
+
+from src.components import (
+    vertical_spacer,
+    split_row,
+    migration_map,
+    national_risk_score,
+    climate_hazards,
+)
 
 
 def display_population_projections(county_name, state_name, county_fips, population_historical, population_projections):
@@ -453,19 +461,67 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
     # Display the chart
     st.plotly_chart(fig, use_container_width=True)
 
-st.header('Climate Migration Dashboard')
+
+####################################################################################################
+####################################################################################################
+####################################################################################################
+######################################## START OF DASHBOARD ########################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+
+
+st.title('Is America Ready to Move?')
 
 # Get the database connection
 db_conn = db.get_db_connection()
 
 counties = db.get_county_metadata(db_conn)
 
+# Short paragraph explaining why climate migration will occur and how
+st.markdown("""
+### Climate-Induced Migration
+Climate change is increasingly driving population shifts across the United States. As extreme weather events become more frequent and severe, communities around the country face challenges including sea-level rise, extreme heat, drought, wildfires, and flooding. These environmental pressures are expected to force increasingly more people to relocate from high-risk areas to regions with better climate resilience, impacting local economies, housing markets, and public services.
+""")
+
+# Climate migration choropleth of US counties
+migration_map(None, db_conn)
+
+
+# Explain factors that will affect the magnitude of climate-induced migration
+st.markdown("""
+            ### Climate Vulnerability Isn't the Whole Story
+            """)
+st.markdown("""
+            Of course, climate vulnerability won't be the only factor that drives migration decisions. While some people may consider leaving areas prone to climate hazards, research shows that economic factors like job opportunities and wages will still play a dominant role in determining if, when, and where people relocate.
+            """)
+
+
+
+with st.expander("Read more", icon=":material/article:"):
+    st.markdown("""When regions experiencing population loss due to climate concerns face labor shortages, wages tend to rise, creating an economic incentive for some people to stay or even move into these areas despite climate risks. Housing prices also adjust, becoming more affordable in areas experiencing outmigration, which further complicates migration patterns. This economic "dampening effect" means that even highly climate-vulnerable counties won't see mass exoduses, as financial considerations, family ties, and community connections often outweigh climate concerns in people's decision-making process. Migration is ultimately a complex interplay of climate, economic, social, and personal factors rather than a simple response to climate vulnerability alone.""")
+
+
+st.markdown("##### Key Migration Decision Factors:")
+
+st.markdown("**:material/cloud_alert: Climate Risks** - Vulnerability to climate hazards")
+st.markdown("**:material/house: Housing Cost** - Availability of affordable housing")
+st.markdown("**:material/work: Labor Demand** - Strength of local job markets")
+
+vertical_spacer(5)
+
+# 4. Select a county to see how it may be impacted
+st.markdown(
+    "Select a county to see how it may be impacted by climate-induced migration:")
+
 # TODO: Can we package the county name and FIPS code in the selectbox?
+default_county_fips = '36029'
+
 county = st.selectbox(
     'Select a county',
     counties.NAME,
     placeholder='Type to search...',
-    index=None
+    index=counties.index.get_loc(default_county_fips)
 )
 
 # Get the County FIPS code, which will be used for all future queries
@@ -474,12 +530,20 @@ if county:
     county_name, state_name = county.split(', ')
 
     # Ensure that the final form of the FIPS code is 5 digits
-    county_fips = str(counties[counties.NAME == county].index[0]).zfill(5)
-
+    county_fips = counties[counties.NAME == county].index[0]
+    county_fips = str(county_fips).zfill(5)
 else:
     county_name = state_name = county_fips = None
 
 if county_fips:
+    split_row(
+        lambda: national_risk_score(county_name, state_name, county_fips), 
+        lambda: climate_hazards(county_fips, county_name), 
+        [0.5, 0.5])
+
+    vertical_spacer(10)
+
+    # 6. Show current population and projected populations of the county
     population_historical = db.get_population_timeseries(
         db_conn, None
     )
@@ -491,9 +555,14 @@ if county_fips:
         display_population_projections(
             county_name, state_name, county_fips, population_historical, population_projections)
 
+    # 7. Show socioeconomic indicator analyses
+    st.markdown("### Socioeconomic Indicators Analysis")
+    st.markdown(
+        f"The following indicators show how {county_name} may be affected by projected population changes:")
+
     display_housing_indicators(county_name, state_name, county_fips, db_conn)
     display_education_indicators(county_name, state_name, county_fips, db_conn)
-    display_unemployment_indicators(county_name, state_name, county_fips, db_conn)
-    display_unemployment_by_education(county_name, state_name, county_fips, db_conn)
-else:
-    st.info("Please select a county to view population projections.")
+    display_unemployment_indicators(
+        county_name, state_name, county_fips, db_conn)
+    display_unemployment_by_education(
+        county_name, state_name, county_fips, db_conn)
