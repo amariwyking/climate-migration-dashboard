@@ -40,9 +40,12 @@ def get_db_connection():
             DATABASE_URL.replace("postgres://", "postgresql://", 1),
             connect_args={"sslmode": SSL_MODE},
         )
+        
         conn = engine.connect()
 
-        print(conn.engine.url)
+        print(f"Dashboard running from \033[1m{ENVIRONMENT}\033[0m environment")
+        print(f"Database connection established via URL: \033[1m{conn.engine.url}\033[0m")
+        print()
 
         return conn
     except Exception as e:
