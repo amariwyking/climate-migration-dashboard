@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import re
 import numpy as np
-from typing import Dict, List
+from typing import Dict
 
 # Configuration constants
 PATHS = {
@@ -12,6 +12,7 @@ PATHS = {
         "education": Path("./data/raw/education_data"),
         "housing": Path("./data/raw/housing_data"),
         "population": Path("./data/raw/population_data"),
+        "counties": Path("./data/raw/counties_data"),
     },
 }
 
@@ -67,7 +68,7 @@ POPULATION_COLUMN = "B01003_001E"
 COMMON_COLUMNS = ["STATE", "COUNTY"]
 
 
-class CensusDataCleaner:
+class DataCleaner:
     @staticmethod
     def get_year_from_filename(filename: str) -> int:
         """Extract year from filename using regex pattern."""
@@ -137,7 +138,7 @@ class CensusDataCleaner:
                 continue
 
             # Read and process data
-            df = pd.read_csv(file, skiprows=[1], dtype=str, low_memory=False)
+            df = pd.read_csv(file, dtype=str, low_memory=False)
             df = cls.process_dataframe(df, column_map, year, data_type)
             all_dfs.append(df)
 
@@ -223,13 +224,51 @@ class CensusDataCleaner:
         merged_data_with_z_scores.to_csv(output_path, index=False)
         print(f"{data_type.capitalize()} data successfully saved to {output_path}")
 
+    @classmethod
+    def clean_counties_data(cls):
+        # Create output directory for counties data
+        counties_output_dir = PATHS["processed"] / "counties_with_geometry"
+        counties_output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Process each counties file by year
+        for file in PATHS["raw_data"]["counties"].iterdir():
+            if not file.is_file() or file.suffix != ".csv":
+                continue
+
+            year = cls.get_year_from_filename(file.name)
+            if not year:
+                continue
+
+            # Read the counties data
+            df = pd.read_csv(file, dtype={"STATE": str, "COUNTY": str})
+            
+            # Check if geometry column exists and rename to GEOMETRY
+            if "geometry" in df.columns:
+                df = df.rename(columns={"geometry": "GEOMETRY"})
+            
+            # Create COUNTY_FIPS by combining STATE and COUNTY columns
+            if "STATE" in df.columns and "COUNTY" in df.columns:
+                df["COUNTY_FIPS"] = (df["STATE"] + df["COUNTY"]).str.zfill(5)
+            
+            # Set COUNTY_FIPS as index
+            df = df.set_index("COUNTY_FIPS")
+            
+            # Save the processed file with the same name
+            output_path = counties_output_dir / file.name
+            df.to_csv(output_path)
+            
+            print(f"Cleaned counties data for year {year} saved to {output_path}")
+
 
 def main():
     # Process all types of data
     data_types = ["economic", "education", "housing"]
 
     for data_type in data_types:
-        CensusDataCleaner.process_and_save_data(data_type)
+        DataCleaner.process_and_save_data(data_type)
+        
+    # Process counties data separately by year
+    DataCleaner.clean_counties_data()
 
     print("All data processing completed.")
 
