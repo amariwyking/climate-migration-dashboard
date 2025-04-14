@@ -1,11 +1,13 @@
+import json
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
 import src.db as db
 
-import json
+from shapely import wkt
 from urllib.request import urlopen
 
 
@@ -19,27 +21,34 @@ def migration_map(data, conn):
 
         counties_data = db.get_county_metadata(conn)
 
-        # print(counties_data)
+        counties_data = counties_data.merge(
+            db.get_population_projections_by_fips(conn),
+            how='inner',
+            on='COUNTY_FIPS'
+        )
+        
+        counties_data['GEOMETRY'] = counties_data['GEOMETRY'].apply(wkt.loads)
 
-        fig = px.choropleth(df, geojson=counties, locations='fips', color='unemp',
+        fig = px.choropleth(counties_data, geojson=counties, locations='COUNTY_FIPS', color=np.log(counties_data['POPULATION_2065_S5c']),
                             color_continuous_scale="Viridis",
-                            range_color=(0, 12),
+                            # range_color=(0, 12),
                             scope="usa",
-                            labels={'unemp': 'unemployment rate'},
+                            labels={'POPULATION_2065_S5c': 'Population Increase'},
                             basemap_visible=False,
                             )
 
+        fig.update_geos(fitbounds="locations", visible=False)
 
         fig.update_layout(
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
             coloraxis_colorbar=dict(
-                orientation='h',  # 'h' for horizontal
-                # thickness=15,     # Adjust thickness of the colorbar
+                orientation='v',  # 'h' for horizontal
+                thickness=30,     # Adjust thickness of the colorbar
                 len=0.6,          # Length as fraction of the plot area width
-                y=-0.1,           # Position below the map (-0.1 means 10% below)
-                x=0.5,            # Center the colorbar horizontally
-                # xanchor='center',  # Anchor point for x position
-                yanchor='top'     # Anchor point for y position
+                y=0.5,           # Position below the map (-0.1 means 10% below)
+                x=0.9,            # Center the colorbar horizontally
+                # xanchor='right',  # Anchor point for x position
+                # yanchor='top'     # Anchor point for y position
             ),
         )
         
@@ -47,6 +56,8 @@ def migration_map(data, conn):
 
         event = st.plotly_chart(fig, on_select="rerun", selection_mode=[
             "points"])
+        
+        return event
     except Exception as e:
         print(f"Could not connect to url.\n{e}")
 
