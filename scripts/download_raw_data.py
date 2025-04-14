@@ -212,11 +212,13 @@ class DataDownloader:
 
         # Get list of years within the specified range
         years_range = range(crime_config["YEARS"][0], crime_config["YEARS"][1] + 1)
-        
+
         # Check which years already exist
-        existing_files = {int(f.stem.split('_')[-1]): f 
-                        for f in state_crime_output_dir.glob("state_crime_data_*.csv")}
-        
+        existing_files = {
+            int(f.stem.split("_")[-1]): f
+            for f in state_crime_output_dir.glob("state_crime_data_*.csv")
+        }
+
         # Skip if all years exist
         if all(year in existing_files for year in years_range):
             print("All crime data files already exist, skipping download")
@@ -241,7 +243,9 @@ class DataDownloader:
                 print(f"Fetching crime data for (FIPS: {state_fips})...")
                 data = dc.get_stat_series(
                     f"geoId/{state_fips}",
-                    crime_config["VARIABLES"][0],  # Using the first variable in the list
+                    crime_config["VARIABLES"][
+                        0
+                    ],  # Using the first variable in the list
                 )
 
                 if data:  # Check if data exists
@@ -250,15 +254,21 @@ class DataDownloader:
                         year_int = int(year)  # Convert year to integer for comparison
 
                         # Only process years that don't already exist and are within range
-                        if (crime_config["YEARS"][0] <= year_int <= crime_config["YEARS"][1] 
-                            and year_int not in existing_files):
+                        if (
+                            crime_config["YEARS"][0]
+                            <= year_int
+                            <= crime_config["YEARS"][1]
+                            and year_int not in existing_files
+                        ):
                             if year not in crime_data_by_year:
                                 crime_data_by_year[year] = []
 
-                            crime_data_by_year[year].append({
-                                "STATE": state_fips,
-                                crime_config["VARIABLES"][0]: value,
-                            })
+                            crime_data_by_year[year].append(
+                                {
+                                    "STATE": state_fips,
+                                    crime_config["VARIABLES"][0]: value,
+                                }
+                            )
             except Exception as e:
                 print(f"Error fetching crime data for (FIPS: {state_fips}): {str(e)}")
                 continue

@@ -330,6 +330,27 @@ class DataCleaner:
             )
         else:
             merged_data = data
+
+        # For housing data, add affordability metrics
+        if data_type == "housing":
+            # Load economic data to get MEDIAN_INCOME
+            economic_data = cls.load_and_process_data("economic")
+            economic_data = economic_data[["COUNTY_FIPS", "Year", "MEDIAN_INCOME"]]
+            
+            # Merge housing data with economic data
+            merged_data = pd.merge(
+                merged_data, 
+                economic_data, 
+                on=["COUNTY_FIPS", "Year"], 
+                how="left"
+            )
+            
+            # Calculate HOUSE_AFFORDABILITY
+            merged_data["HOUSE_AFFORDABILITY"] = (
+                merged_data["MEDIAN_HOUSING_VALUE"] / merged_data["MEDIAN_INCOME"]
+            ).round(2)
+
+            merged_data.drop(columns=["MEDIAN_INCOME"], inplace=True)
             
         # Calculate z-scores
         merged_data_with_z_scores = cls.calculate_z_scores(merged_data)
@@ -391,7 +412,7 @@ class DataCleaner:
 
         # Special processing for economic data
         if data_type == "economic":
-            processed_df["UNEMPLOYMENT RATE"] = (
+            processed_df["UNEMPLOYMENT_RATE"] = (
                 (processed_df["UNEMPLOYED_PERSONS"] / processed_df["TOTAL_LABOR_FORCE"])
                 * 100
             ).round(2)

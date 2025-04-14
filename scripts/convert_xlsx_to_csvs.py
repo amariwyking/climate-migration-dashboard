@@ -6,7 +6,7 @@ def setup_directories():
     """Initialize input and output directories."""
     input_dir = Path("./data/raw/monthly_job_openings_xlsx_data")
     if not input_dir.is_dir():
-      raise FileNotFoundError(f"Directory not found: {input_dir}")
+        raise FileNotFoundError(f"Directory not found: {input_dir}")
     output_dir = Path("./data/raw/monthly_job_openings_csvs_data")
     output_dir.mkdir(parents=True, exist_ok=True)
     return input_dir, output_dir
