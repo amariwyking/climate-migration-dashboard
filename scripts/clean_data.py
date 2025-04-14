@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import re
 import numpy as np
-from typing import Dict
+from typing import Dict, List, Tuple
 
 # Configuration constants
 PATHS = {
@@ -13,6 +13,8 @@ PATHS = {
         "housing": Path("./data/raw/housing_data"),
         "population": Path("./data/raw/population_data"),
         "counties": Path("./data/raw/counties_data"),
+        "job_openings": Path("./data/raw/monthly_job_openings_csvs_data"),
+        "crime": Path("./data/raw/state_crime_data"),
     },
 }
 
@@ -20,10 +22,10 @@ PATHS = {
 COLUMN_MAPPINGS = {
     "economic": {
         (2011, 2023): {
-            "B19301_001E": "MEDIAN INCOME",
-            "B23025_004E": "TOTAL EMPLOYED POPULATION",
-            "B23025_005E": "UNEMPLOYED PERSONS",
-            "B23025_003E": "TOTAL LABOR FORCE",
+            "B19301_001E": "MEDIAN_INCOME",
+            "B23025_004E": "TOTAL_EMPLOYED_POPULATION",
+            "B23025_005E": "UNEMPLOYED_PERSONS",
+            "B23025_003E": "TOTAL_LABOR_FORCE",
         }
     },
     "education": {
@@ -33,8 +35,8 @@ COLUMN_MAPPINGS = {
             "B23006_009E": "HIGH_SCHOOL_GRADUATE_TOTAL",
             "B23006_016E": "SOME_COLLEGE_TOTAL",
             "B23006_023E": "BACHELOR_OR_HIGH_TOTAL",
-            "B14001_001E": "TOTAL",
-            "B14001_002E": "Enrolled",
+            "B14001_001E": "TOTAL_ENROLLED_AND_NOT_ENROLLED",
+            "B14001_002E": "TOTAL_ENROLLED",
             "B14001_003E": "ENROLLED_NURSERY_PRESCOOL",
             "B14001_004E": "ENROLLED_KINDERGARTEN",
             "B14001_005E": "ENROLLED_GRADE1_4",
@@ -61,6 +63,27 @@ COLUMN_MAPPINGS = {
             "DP04_0089E": "MEDIAN_HOUSING_VALUE",
             "DP04_0134E": "MEDIAN_GROSS_RENT",
         },
+    },
+    "job_openings": {
+        (2010, 2023): {
+            "Jan": "JOB_OPENING_JAN",
+            "Feb": "JOB_OPENING_FEB",
+            "Apr": "JOB_OPENING_APR",
+            "May": "JOB_OPENING_MAY",
+            "Mar": "JOB_OPENING_MAR",
+            "Jun": "JOB_OPENING_JUN",
+            "Jul": "JOB_OPENING_JUL",
+            "Aug": "JOB_OPENING_AUG",
+            "Sep": "JOB_OPENING_SEP",
+            "Oct": "JOB_OPENING_OCT",
+            "Nov": "JOB_OPENING_NOV",
+            "Dec": "JOB_OPENING_DEC",
+        }
+    },
+    "crime": {
+        (2010, 2023): {
+            "Count_CriminalActivities_CombinedCrime": "Criminal_Activities"
+        }
     },
 }
 
@@ -111,6 +134,210 @@ class DataCleaner:
                 ).round(4)
 
         return df_with_z_scores
+
+    @classmethod
+    def load_population_data(cls) -> pd.DataFrame:
+        """Load and process population data from raw CSV files."""
+        pop_frames = []
+
+        for file in PATHS["raw_data"]["population"].iterdir():
+            if not file.is_file():
+                continue
+
+            year = cls.get_year_from_filename(file.name)
+            if not year:
+                continue
+
+            df = pd.read_csv(file, dtype=str, low_memory=False)
+            processed_df = cls.process_population_dataframe(df, year)
+            pop_frames.append(processed_df)
+
+        return (
+            pd.concat(pop_frames, ignore_index=True) if pop_frames else pd.DataFrame()
+        )
+
+    @staticmethod
+    def process_population_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
+        """Process individual population dataframe."""
+        df["COUNTY_FIPS"] = (df["STATE"] + df["COUNTY"]).str.zfill(5)
+        df["Year"] = year
+        df = df.rename(columns={POPULATION_COLUMN: "POPULATION"})
+        return df[["COUNTY_FIPS", "Year", "POPULATION", "STATE", "COUNTY", "NAME"]]
+
+    @classmethod
+    def load_county_population_data(cls) -> Dict[int, pd.DataFrame]:
+        """Load county population data for job openings and crime data processing."""
+        county_with_pop = {}
+        years = range(2010, 2024)
+        
+        for year in years:
+            try:
+                pop_path = PATHS["raw_data"]["population"] / f"census_population_data_{year}.csv"
+                if not pop_path.exists():
+                    continue
+                    
+                pop_df = pd.read_csv(pop_path, dtype={'STATE': str, 'COUNTY': str})
+                pop_df['STATE'] = pop_df['STATE'].str.zfill(2)
+                pop_df['COUNTY'] = pop_df['COUNTY'].str.zfill(3)
+                pop_df['COUNTY_FIPS'] = pop_df['STATE'] + pop_df['COUNTY']
+                pop_df.rename(columns={POPULATION_COLUMN: 'POPULATION'}, inplace=True)
+                
+                # Select columns using a list
+                county_with_pop[year] = pop_df[['COUNTY_FIPS', 'STATE', 'COUNTY', 'NAME', 'POPULATION']]
+            except Exception as e:
+                print(f"Error loading population data for {year}: {e}")
+                
+        return county_with_pop
+
+    @classmethod
+    def process_job_openings_data(cls) -> pd.DataFrame:
+        """Process job openings data."""
+        years = range(2010, 2024)
+        all_county_data = []
+        county_with_pop = cls.load_county_population_data()
+        
+        # Define monthly columns
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        for year in years:
+            try:
+                job_path = PATHS["raw_data"]["job_openings"] / f"state_job_opening_data_{year}.csv"
+                if not job_path.exists():
+                    print(f"No job openings data found for {year}")
+                    continue
+                    
+                job_openings = pd.read_csv(job_path, dtype={'STATE': str})
+                job_openings['STATE'] = job_openings['STATE'].str.zfill(2)
+                
+                if year not in county_with_pop:
+                    continue
+                
+                # Process county data
+                county_data = county_with_pop[year].copy()
+                
+                # Calculate state-level population totals
+                state_pop = county_data.groupby('STATE')['POPULATION'].sum().reset_index()
+                state_pop.columns = ['STATE', 'STATE_POP']
+                
+                county_data = county_data.merge(state_pop, on='STATE', how='left')
+                county_data['POP_RATIO'] = county_data['POPULATION'] / county_data['STATE_POP']
+                
+                # Merge and handle missing data
+                county_data = county_data.merge(job_openings, left_on='STATE', right_on='STATE', how='left')
+                
+                # Calculate job openings for each month
+                for month in months:
+                    month_col = month
+                    target_col = COLUMN_MAPPINGS["job_openings"][(2010, 2023)][month]
+                    county_data[target_col] = round(county_data['POP_RATIO'] *
+                                                  county_data[month_col].fillna(0) * 1000)
+                
+                # Select final columns
+                final_columns = ['COUNTY_FIPS', 'STATE', 'COUNTY', 'NAME', 'POPULATION'] + \
+                                [COLUMN_MAPPINGS["job_openings"][(2010, 2023)][month] for month in months]
+                cleaned_data = county_data[final_columns].dropna(how='all')
+                cleaned_data['Year'] = year
+                
+                all_county_data.append(cleaned_data)
+                
+            except Exception as e:
+                print(f"Error processing job openings data for {year}: {e}")
+                continue
+                
+        # Combine all years into a single DataFrame
+        if all_county_data:
+            return pd.concat(all_county_data, ignore_index=True)
+        return pd.DataFrame()
+
+    @classmethod
+    def process_crime_data(cls) -> pd.DataFrame:
+        """Process crime data."""
+        years = range(2010, 2024)
+        all_county_data = []
+        county_with_pop = cls.load_county_population_data()
+        
+        for year in years:
+            try:
+                crime_path = PATHS["raw_data"]["crime"] / f"state_crime_data_{year}.csv"
+                if not crime_path.exists():
+                    print(f"No crimes data found for {year}")
+                    continue
+                    
+                crime_data = pd.read_csv(crime_path, dtype={'STATE': str})
+                crime_data['STATE'] = crime_data['STATE'].str.zfill(2)
+                
+                if year not in county_with_pop:
+                    continue
+                
+                # Process county data
+                county_data = county_with_pop[year].copy()
+                
+                # Calculate state-level population totals
+                state_pop = county_data.groupby('STATE')['POPULATION'].sum().reset_index()
+                state_pop.columns = ['STATE', 'STATE_POP']
+                
+                county_data = county_data.merge(state_pop, on='STATE', how='left')
+                county_data['POP_RATIO'] = county_data['POPULATION'] / county_data['STATE_POP']
+                
+                # Merge and handle missing data
+                county_data = county_data.merge(crime_data, left_on='STATE', right_on='STATE', how='left')
+                
+                # Calculate criminal activities
+                source_col = "Count_CriminalActivities_CombinedCrime"
+                target_col = COLUMN_MAPPINGS["crime"][(2010, 2023)][source_col]
+                county_data[target_col] = round(county_data['POP_RATIO'] * county_data[source_col].fillna(0))
+                
+                # Select final columns
+                final_columns = ['COUNTY_FIPS', 'STATE', 'COUNTY', 'NAME', 'POPULATION', target_col]
+                cleaned_data = county_data[final_columns].dropna(how='all')
+                cleaned_data['Year'] = year
+                
+                all_county_data.append(cleaned_data)
+                
+            except Exception as e:
+                print(f"Error processing crime data for {year}: {e}")
+                continue
+                
+        # Combine all years into a single DataFrame
+        if all_county_data:
+            return pd.concat(all_county_data, ignore_index=True)
+        return pd.DataFrame()
+
+    @classmethod
+    def process_and_save_data(cls, data_type: str):
+        """Process and save a specific type of data."""
+        # Create output directory
+        PATHS["processed"].mkdir(parents=True, exist_ok=True)
+        
+        if data_type in ["economic", "education", "housing"]:
+            # Use existing method for these data types
+            data = cls.load_and_process_data(data_type)
+        elif data_type == "job_openings":
+            data = cls.process_job_openings_data()
+        elif data_type == "crime":
+            data = cls.process_crime_data()
+        else:
+            print(f"Unknown data type: {data_type}")
+            return
+            
+        # Load population data if not already included
+        if 'POPULATION' not in data.columns and data_type not in ["job_openings", "crime"]:
+            population_data = cls.load_population_data()
+            # Merge datasets
+            merged_data = pd.merge(
+                data, population_data, on=["COUNTY_FIPS", "Year"], how="left"
+            )
+        else:
+            merged_data = data
+            
+        # Calculate z-scores
+        merged_data_with_z_scores = cls.calculate_z_scores(merged_data)
+        
+        # Save final output
+        output_path = PATHS["processed"] / f"cleaned_{data_type}_data.csv"
+        merged_data_with_z_scores.to_csv(output_path, index=False)
+        print(f"{data_type.capitalize()} data successfully saved to {output_path}")
 
     @classmethod
     def load_and_process_data(cls, data_type: str) -> pd.DataFrame:
@@ -165,64 +392,11 @@ class DataCleaner:
         # Special processing for economic data
         if data_type == "economic":
             processed_df["UNEMPLOYMENT RATE"] = (
-                (processed_df["UNEMPLOYED PERSONS"] / processed_df["TOTAL LABOR FORCE"])
+                (processed_df["UNEMPLOYED_PERSONS"] / processed_df["TOTAL_LABOR_FORCE"])
                 * 100
             ).round(2)
 
         return processed_df.drop(columns=COMMON_COLUMNS)
-
-    @classmethod
-    def load_population_data(cls) -> pd.DataFrame:
-        """Load and process population data from raw CSV files."""
-        pop_frames = []
-
-        for file in PATHS["raw_data"]["population"].iterdir():
-            if not file.is_file():
-                continue
-
-            year = cls.get_year_from_filename(file.name)
-            if not year:
-                continue
-
-            df = pd.read_csv(file, dtype=str, low_memory=False)
-            processed_df = cls.process_population_dataframe(df, year)
-            pop_frames.append(processed_df)
-
-        return (
-            pd.concat(pop_frames, ignore_index=True) if pop_frames else pd.DataFrame()
-        )
-
-    @staticmethod
-    def process_population_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
-        """Process individual population dataframe."""
-        df["COUNTY_FIPS"] = (df["STATE"] + df["COUNTY"]).str.zfill(5)
-        df["Year"] = year
-        return df.rename(columns={POPULATION_COLUMN: "POPULATION"})[
-            ["COUNTY_FIPS", "Year", "POPULATION"]
-        ]
-
-    @classmethod
-    def process_and_save_data(cls, data_type: str):
-        """Process and save a specific type of data."""
-        # Create output directory
-        PATHS["processed"].mkdir(parents=True, exist_ok=True)
-
-        # Load and process data
-        data = cls.load_and_process_data(data_type)
-        population_data = cls.load_population_data()
-
-        # Merge datasets
-        merged_data = pd.merge(
-            data, population_data, on=["COUNTY_FIPS", "Year"], how="left"
-        )
-
-        # Calculate z-scores
-        merged_data_with_z_scores = cls.calculate_z_scores(merged_data)
-
-        # Save final output
-        output_path = PATHS["processed"] / f"cleaned_{data_type}_data.csv"
-        merged_data_with_z_scores.to_csv(output_path, index=False)
-        print(f"{data_type.capitalize()} data successfully saved to {output_path}")
 
     @classmethod
     def clean_counties_data(cls):
@@ -262,7 +436,7 @@ class DataCleaner:
 
 def main():
     # Process all types of data
-    data_types = ["economic", "education", "housing"]
+    data_types = ["economic", "education", "housing", "job_openings", "crime"]
 
     for data_type in data_types:
         DataCleaner.process_and_save_data(data_type)
