@@ -11,4 +11,41 @@
 7. Create an .env and file and add your `US_CENSUS_API_KEY` and postgresSQL `DATABASE_URL` to it.
 8. Create directory and txt file to save postgress password `secrets\postgres_passwod.txt`.
 9. Run `.\scripts\pipeline.bat` for Windows or `./scripts/pipeline.sh` for MacOS & Linux.
-10. To start the dashboard, run `streamlit run ./climate_migration/app/main.py`.
+10. To start the dashboard, run `streamlit run app/main.py` from the `./climate_migration` directory like so:
+
+```bash
+# From the root of the repository
+cd climate_migration
+streamlit run app/main.py
+```
+
+## Data Structure
+
+### Raw Data
+
+- **Downloaded using scripts**:
+  - `counties_data`
+  - `economic_data`
+  - `education_data`
+  - `housing_data`
+  - `population_data`
+  - `state_crime_data`
+  - `state_data`
+
+- **Downloaded manually**:
+  - `monthly_job_openings_xlsx_data`
+
+### Cleaned Data
+
+- **Processed**:
+  - **Combined and saved**:
+    - `cleaned_economic_data`
+    - `cleaned_education_data`
+    - `cleaned_housing_data`
+  - **Separate yearly data saved**:
+    - `counties_with_geometry`
+    - `decennial_county_population_data_1900_1990`
+
+- **Projected Data**:
+  - `county_population_projections`
+  

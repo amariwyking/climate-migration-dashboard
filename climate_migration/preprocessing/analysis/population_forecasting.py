@@ -13,31 +13,11 @@ def main():
 
     # Census 2065 population projection for the US
     CENSUS_POP_2065 = 366207000
-    
-    QUERY_YEAR = 2010
 
-    # Download the names of the states
-    state_names = ced.download(
-        dataset=ACS5,
-        vintage=QUERY_YEAR,
-        state='*',
-        download_variables=['NAME'],
-    )
+    state_names = pd.read_csv("./data/raw/state_data/state_names.csv")
 
-    # Remove states that are not contiguous and locations that are not official states
-    excluded_locations = ['District of Columbia',
-                          'Alaska', 'Hawaii', 'Puerto Rico']
-    contiguous_states = state_names[~state_names['NAME'].isin(
-        excluded_locations)]['STATE']
-
-    # Pull 2010 population data for counties in the contiguous United States
-    us_county_data = ced.download(
-        dataset=ACS5,
-        vintage=QUERY_YEAR,
-        download_variables=['NAME', 'B01003_001E'],
-        state=contiguous_states,
-        county='*',
-        with_geometry=True,
+    us_county_data = pd.read_csv(
+        "./data/raw/population_data/census_population_data_2010.csv"
     )
 
     # Rename columns
@@ -201,9 +181,7 @@ def main():
 
     # Add scenario population projections to climate regions dataframe
     climate_region_populations = climate_region_populations.merge(
-        alternate_scenario_5_pop_shares.mul(CENSUS_POP_2065).astype(
-            int
-        ),
+        alternate_scenario_5_pop_shares.mul(CENSUS_POP_2065).astype(int),
         left_index=True,
         right_index=True,
     ).rename(
@@ -257,7 +235,7 @@ def main():
     us_county_data = us_county_data.set_index("COUNTY_FIPS")
 
     # Export the final dataset to CSV
-    us_county_data.drop(columns=["geometry"]).to_csv(OUTPUT_FILE)
+    us_county_data.to_csv(OUTPUT_FILE)
     print(f"County population projections exported to {OUTPUT_FILE}")
 
 
