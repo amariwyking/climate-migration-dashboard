@@ -1,8 +1,9 @@
 from pathlib import Path
 import pandas as pd
 import censusdis.data as ced
+import datacommons as dc
 from dotenv import load_dotenv
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import os
 import concurrent.futures
 import time
@@ -13,7 +14,13 @@ load_dotenv()
 CONFIG = {
     "US_CENSUS_API_KEY": os.getenv("US_CENSUS_API_KEY"),
     "BASE_DATA_DIR": Path("./data/raw"),
-    "EXCLUDED_STATES": ["District of Columbia", "Alaska", "Hawaii", "Puerto Rico"],
+    "EXCLUDED_STATES": [
+        "11",
+        "72",
+        "15",
+        "02",
+        "78",
+    ],  # DC, PR, HI, AK, VI as FIPS codes
     "DATASETS": {
         "HOUSING": {
             "DATASET": "acs/acs5/profile",
@@ -57,12 +64,26 @@ CONFIG = {
             "YEARS": (2011, 2023),
             "VARIABLE": ["B19301_001E", "B23025_004E", "B23025_005E", "B23025_003E"],
         },
+        "CRIME": {
+            "DATA_SOURCE": "datacommons",
+            "YEARS": (
+                2010,
+                2023,
+            ),  # The range will be automatically filtered by available data
+            "VARIABLES": ["Count_CriminalActivities_CombinedCrime"],
+            "STATE_RANGE": (1, 80),  # Range of state IDs to try
+        },
+        "COUNTIES": {
+            "DATASET": "acs/acs5",
+            "YEARS": (2010, 2023),
+            "VARIABLE": ["NAME"],
+        },
     },
     "MAX_WORKERS": min(32, (os.cpu_count() or 1) + 4),  # Optimized concurrency
 }
 
 
-class CensusDataDownloader:
+class DataDownloader:
     def __init__(self):
         self._validate_api_key()
         self.contiguous_states = self._get_contiguous_states()
@@ -73,9 +94,9 @@ class CensusDataDownloader:
 
     def _get_contiguous_states(self) -> List[str]:
         """Get list of contiguous state codes for all datasets"""
-        metadata_dir = CONFIG["BASE_DATA_DIR"] / "metadata"
-        metadata_dir.mkdir(parents=True, exist_ok=True)
-        state_file = metadata_dir / "state_names.csv"
+        state_data_dir = CONFIG["BASE_DATA_DIR"] / "state_data"
+        state_data_dir.mkdir(parents=True, exist_ok=True)
+        state_file = state_data_dir / "state_names.csv"
 
         if not state_file.exists():
             state_df = ced.download(
@@ -85,7 +106,10 @@ class CensusDataDownloader:
                 download_variables=["NAME"],
                 api_key=CONFIG["US_CENSUS_API_KEY"],
             )
-            state_df = state_df[~state_df["NAME"].isin(CONFIG["EXCLUDED_STATES"])]
+            # Filter out excluded states using FIPS codes
+            state_df = state_df[
+                ~state_df["STATE"].astype(str).isin(CONFIG["EXCLUDED_STATES"])
+            ]
             state_df.to_csv(state_file, index=False)
 
         state_df = pd.read_csv(state_file)
@@ -102,10 +126,15 @@ class CensusDataDownloader:
 
         # Check if dataset has a nested VARIABLES dictionary
         if "VARIABLES" in dataset_config:
-            for (start, end), variables in dataset_config["VARIABLES"].items():
-                if start <= year <= end:
-                    return ["NAME"] + variables
-            raise ValueError(f"No variables defined for {dataset} in {year}")
+            # Check if the variables are defined as a dictionary by year ranges
+            if isinstance(dataset_config["VARIABLES"], dict):
+                for (start, end), variables in dataset_config["VARIABLES"].items():
+                    if start <= year <= end:
+                        return ["NAME"] + variables
+                raise ValueError(f"No variables defined for {dataset} in {year}")
+            else:
+                # Variables defined as a list directly
+                return ["NAME"] + dataset_config["VARIABLES"]
 
         # Check if dataset has a single VARIABLE key (string or list)
         if "VARIABLE" in dataset_config:
@@ -119,6 +148,11 @@ class CensusDataDownloader:
     def _download_single_dataset_year(self, dataset: str, year: int) -> None:
         """Download a single dataset for a specific year"""
         dataset_config = CONFIG["DATASETS"][dataset]
+
+        # Skip if dataset is CRIME - it's handled separately
+        if dataset == "CRIME":
+            return
+
         data_dir = CONFIG["BASE_DATA_DIR"] / f"{dataset.lower()}_data"
         data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -137,7 +171,7 @@ class CensusDataDownloader:
                 download_variables=variables,
                 state=self.contiguous_states,
                 county="*",
-                with_geometry=("POPULATION" in dataset),
+                with_geometry=("COUNTIES" in dataset),
                 api_key=CONFIG["US_CENSUS_API_KEY"],
             )
 
@@ -149,6 +183,11 @@ class CensusDataDownloader:
 
     def _download_dataset(self, dataset: str) -> None:
         """Parallel download handler for a dataset"""
+        # Handle crime dataset separately
+        if dataset == "CRIME":
+            self._download_crime_data()
+            return
+
         dataset_config = CONFIG["DATASETS"][dataset]
         years = self._get_years_from_range(dataset_config["YEARS"])
 
@@ -164,6 +203,83 @@ class CensusDataDownloader:
 
             # Wait for all futures to complete
             concurrent.futures.wait(futures)
+
+    def _download_crime_data(self) -> None:
+        """Download crime data from Data Commons API"""
+        crime_config = CONFIG["DATASETS"]["CRIME"]
+        state_crime_output_dir = CONFIG["BASE_DATA_DIR"] / "state_crime_data"
+        os.makedirs(state_crime_output_dir, exist_ok=True)
+
+        # Get list of years within the specified range
+        years_range = range(crime_config["YEARS"][0], crime_config["YEARS"][1] + 1)
+
+        # Check which years already exist
+        existing_files = {
+            int(f.stem.split("_")[-1]): f
+            for f in state_crime_output_dir.glob("state_crime_data_*.csv")
+        }
+
+        # Skip if all years exist
+        if all(year in existing_files for year in years_range):
+            print("All crime data files already exist, skipping download")
+            return
+
+        print("Downloading missing crime data from Data Commons...")
+
+        # Create a dictionary to store data by year
+        crime_data_by_year = {}
+
+        # Collect data for all states
+        state_range = crime_config["STATE_RANGE"]
+        for state_id in range(state_range[0], state_range[1]):
+            state_fips = f"{state_id:02d}"
+
+            # Skip excluded states
+            if state_fips in CONFIG["EXCLUDED_STATES"]:
+                print(f"Skipping excluded state with FIPS: {state_fips}")
+                continue
+
+            try:
+                print(f"Fetching crime data for (FIPS: {state_fips})...")
+                data = dc.get_stat_series(
+                    f"geoId/{state_fips}",
+                    crime_config["VARIABLES"][
+                        0
+                    ],  # Using the first variable in the list
+                )
+
+                if data:  # Check if data exists
+                    # For each year in the state's data
+                    for year, value in data.items():
+                        year_int = int(year)  # Convert year to integer for comparison
+
+                        # Only process years that don't already exist and are within range
+                        if (
+                            crime_config["YEARS"][0]
+                            <= year_int
+                            <= crime_config["YEARS"][1]
+                            and year_int not in existing_files
+                        ):
+                            if year not in crime_data_by_year:
+                                crime_data_by_year[year] = []
+
+                            crime_data_by_year[year].append(
+                                {
+                                    "STATE": state_fips,
+                                    crime_config["VARIABLES"][0]: value,
+                                }
+                            )
+            except Exception as e:
+                print(f"Error fetching crime data for (FIPS: {state_fips}): {str(e)}")
+                continue
+
+        # Save separate CSV files for each year that doesn't already exist
+        for year, data in crime_data_by_year.items():
+            if data:
+                df = pd.DataFrame(data)
+                file_path = state_crime_output_dir / f"state_crime_data_{year}.csv"
+                df.to_csv(file_path, index=False)
+                print(f"Saved crime data for year {year} with {len(df)} records")
 
     def download_all_data(self):
         """Download all datasets with timing"""
@@ -187,7 +303,7 @@ class CensusDataDownloader:
 
 
 def main():
-    downloader = CensusDataDownloader()
+    downloader = DataDownloader()
     downloader.download_all_data()
     print("All dataset downloads completed.")
 
