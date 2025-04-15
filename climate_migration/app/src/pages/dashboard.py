@@ -268,11 +268,11 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
     # Retrieve the unemployment data needed for the chart
     # Using the same pattern as your education function but with economic data table
     total_labor_force_df = db.get_county_timeseries_data(
-        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "TOTAL LABOR FORCE", county_fips=county_fips)
+        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "TOTAL_LABOR_FORCE", county_fips=county_fips)
     unemployed_persons_df = db.get_county_timeseries_data(
-        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYED PERSONS", county_fips=county_fips)
+        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYED_PERSONS", county_fips=county_fips)
     unemployment_rate_df = db.get_county_timeseries_data(
-        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYMENT RATE", county_fips=county_fips)
+        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYMENT_RATE", county_fips=county_fips)
 
     # Combine all dataframes into one
     total_unemployment = pd.DataFrame()
