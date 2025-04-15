@@ -4,9 +4,9 @@ from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-PROCESSED_DIR = DATA_DIR / "processed"
+# BASE_DIR = Path(".")
+DATA_DIR = Path("./data")
+PROCESSED_DIR = DATA_DIR / "preprocessed"
 CLEANED_DIR = PROCESSED_DIR / "cleaned_data"
 
 # Input data paths
@@ -98,7 +98,7 @@ def main():
     normalization_config = {
         'crime': ['Criminal_Activities'],
         'economic': ['MEDIAN_INCOME', 'UNEMPLOYMENT_RATE', 'TOTAL_EMPLOYED_POPULATION'],
-        'education': ['BACHELOR_OR_HIGH_TOTAL', 'TOTAL_ENROLLED', 'LESS_THAN_HIGH_SCHOOL_UNEMPLOYED'],
+        'education': ['BACHELORS_OR_HIGHER_TOTAL', 'TOTAL_ENROLLED', 'LESS_THAN_HIGH_SCHOOL_UNEMPLOYED'],
         'housing': ['MEDIAN_HOUSING_VALUE', 'MEDIAN_GROSS_RENT', 'HOUSE_AFFORDABILITY'],
         'jobs': ['JOB_OPENING_JAN', 'JOB_OPENING_FEB', 'JOB_OPENING_MAR', 'JOB_OPENING_APR',
                 'JOB_OPENING_MAY', 'JOB_OPENING_JUN', 'JOB_OPENING_JUL', 'JOB_OPENING_AUG',

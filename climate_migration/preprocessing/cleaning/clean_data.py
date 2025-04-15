@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 
 # Configuration constants
 PATHS = {
-    "processed": Path("./data/processed/cleaned_data"),
+    "processed": Path("./data/preprocessed/cleaned_data"),
     "raw_data": {
         "economic": Path("./data/raw/economic_data"),
         "education": Path("./data/raw/education_data"),
@@ -34,7 +34,7 @@ COLUMN_MAPPINGS = {
             "B23006_002E": "LESS_THAN_HIGH_SCHOOL_TOTAL",
             "B23006_009E": "HIGH_SCHOOL_GRADUATE_TOTAL",
             "B23006_016E": "SOME_COLLEGE_TOTAL",
-            "B23006_023E": "BACHELOR_OR_HIGH_TOTAL",
+            "B23006_023E": "BACHELORS_OR_HIGHER_TOTAL",
             "B14001_001E": "TOTAL_ENROLLED_AND_NOT_ENROLLED",
             "B14001_002E": "TOTAL_ENROLLED",
             "B14001_003E": "ENROLLED_NURSERY_PRESCOOL",
@@ -46,8 +46,8 @@ COLUMN_MAPPINGS = {
             "B14001_009E": "ENROLLED_GRADUATE_PROFESSIONAL",
             "B23006_007E": "LESS_THAN_HIGH_SCHOOL_UNEMPLOYED",
             "B23006_014E": "HIGH_SCHOOL_GRADUATE_UNEMPLOYED",
-            "B23006_021E": "SOME_COLLEGE_UNEMLOYED",
-            "B23006_028E": "BACHELOR_OR_HIGH_UNEMPLOYED",
+            "B23006_021E": "SOME_COLLEGE_UNEMPLOYED",
+            "B23006_028E": "BACHELORS_OR_HIGHER_UNEMPLOYED",
         }
     },
     "housing": {

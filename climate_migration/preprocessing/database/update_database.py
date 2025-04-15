@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import pandas as pd
 
-from helpers import get_db_connection
+from climate_migration.utils.helpers import get_db_connection
 
 db_con = get_db_connection()
 
@@ -22,7 +22,7 @@ def upload_csvs_to_postgres(folder_path: str, schema: str = "public") -> None:
             filepath = os.path.join(folder_path, filename)
 
             # Read CSV
-            df = pd.read_csv(filepath)
+            df = pd.read_csv(filepath, dtype={'COUNTY_FIPS': str})
 
             try:
                 # Upload to PostgreSQL
@@ -42,8 +42,7 @@ def upload_csvs_to_postgres(folder_path: str, schema: str = "public") -> None:
 
 
 if __name__ == "__main__":
-    script_dir = Path(__file__).resolve().parent
-    data_folder = script_dir.parent / "data" / "processed"
+    data_folder = Path("./data/preprocessed")
 
     print("\nUploading cleaned data...")
     upload_csvs_to_postgres(data_folder / "cleaned_data")

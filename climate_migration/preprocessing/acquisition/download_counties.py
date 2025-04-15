@@ -5,7 +5,8 @@ from pathlib import Path
 from censusdis.datasets import ACS5
 
 
-DATA_DIR = Path("./data/processed/cleaned_data/")
+DATA_DIR = Path("./data/preprocessed/cleaned_data/")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 counties = ced.download(
     dataset=ACS5,

@@ -7,17 +7,26 @@ import pandas as pd
 
 def main():
     # Constants
-    output_data_dir = Path("./data/processed/projected_data")
+    output_data_dir = Path("./data/preprocessed/projected_data")
     output_data_dir.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE = output_data_dir / f"county_population_projections.csv"
 
     # Census 2065 population projection for the US
     CENSUS_POP_2065 = 366207000
 
-    state_names = pd.read_csv("./data/raw/state_data/state_names.csv")
+    state_names = pd.read_csv(
+        "./data/raw/state_data/state_names.csv",
+        dtype={
+            'STATE': str,
+        }
+    )
 
     us_county_data = pd.read_csv(
-        "./data/raw/population_data/census_population_data_2010.csv"
+        "./data/raw/population_data/census_population_data_2010.csv",
+        dtype={
+            'COUNTY': str,
+            'STATE': str,
+        }
     )
 
     # Rename columns
@@ -169,7 +178,8 @@ def main():
 
     # Generate scenario variations
     def generate_scenario_5_variations(col):
-        change_in_pop_share = qf_2065_regional_population_shares["Scenario_3"].mul(col)
+        change_in_pop_share = qf_2065_regional_population_shares["Scenario_3"].mul(
+            col)
         new_scenario_shares = qf_2065_regional_population_shares["Scenario_3"].add(
             change_in_pop_share
         )
@@ -231,6 +241,11 @@ def main():
     us_county_data = us_county_data.merge(
         us_county_population_projections, left_index=True, right_index=True
     )
+
+    # us_county_data['COUNTY_FIPS'] = us_county_data['COUNTY_FIPS'].str.zfill(3)
+    # us_county_data['STATE_FIPS'] = us_county_data['STATE_FIPS'].str.zfill(2)
+    # us_county_data['COUNTY_FIPS'] = us_county_data['STATE_FIPS'] + \
+    #     us_county_data['COUNTY_FIPS']
 
     us_county_data = us_county_data.set_index("COUNTY_FIPS")
 
