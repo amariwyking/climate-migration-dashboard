@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import re
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict
 
 # Configuration constants
 PATHS = {
@@ -37,7 +37,7 @@ COLUMN_MAPPINGS = {
             "B23006_023E": "BACHELORS_OR_HIGHER_TOTAL",
             "B14001_001E": "TOTAL_ENROLLED_AND_NOT_ENROLLED",
             "B14001_002E": "TOTAL_ENROLLED",
-            "B14001_003E": "ENROLLED_NURSERY_PRESCOOL",
+            "B14001_003E": "ENROLLED_NURSERY_PRESCHOOL",
             "B14001_004E": "ENROLLED_KINDERGARTEN",
             "B14001_005E": "ENROLLED_GRADE1_4",
             "B14001_006E": "ENROLLED_GRADE5_8",
@@ -53,13 +53,13 @@ COLUMN_MAPPINGS = {
     "housing": {
         (2010, 2014): {
             "DP04_0001E": "TOTAL_HOUSING_UNITS",
-            "DP04_0044E": "OCCUPIED_HOUSING_UNTIS",
+            "DP04_0044E": "OCCUPIED_HOUSING_UNITS",
             "DP04_0088E": "MEDIAN_HOUSING_VALUE",
             "DP04_0132E": "MEDIAN_GROSS_RENT",
         },
         (2015, 2023): {
             "DP04_0001E": "TOTAL_HOUSING_UNITS",
-            "DP04_0002E": "OCCUPIED_HOUSING_UNTIS",
+            "DP04_0002E": "OCCUPIED_HOUSING_UNITS",
             "DP04_0089E": "MEDIAN_HOUSING_VALUE",
             "DP04_0134E": "MEDIAN_GROSS_RENT",
         },
