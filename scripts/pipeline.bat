@@ -1,13 +1,13 @@
 @echo off
 
-python -m climate_migration.preprocessing.acquisition.download_counties && ^
-python -m climate_migration.preprocessing.acquisition.download_raw_data && ^
-python -m convert_xlsx_to_csvs.py && ^
-python -m climate_migration.preprocessing.analysis.historical_population && ^
-python -m climate_migration.preprocessing.analysis.population_forecasting && ^
-python -m climate_migration.preprocessing.cleaning.clean_data && ^
-python -m socio_economic_index.py && ^
-python -m climate_migration.preprocessing.database.update_database
+python -m preprocessing.acquisition.download_counties && ^
+python -m preprocessing.acquisition.download_raw_data && ^
+python -m preprocessing.cleaning.convert_xlsx_to_csvs && ^
+python -m preprocessing.analysis.historical_population && ^
+python -m preprocessing.analysis.population_forecasting && ^
+python -m preprocessing.cleaning.clean_data && ^
+python -m preprocessing.analysis.socio_economic_index && ^
+python -m preprocessing.database.update_database
 
 echo PostgreSQL updated successfully!
 pause

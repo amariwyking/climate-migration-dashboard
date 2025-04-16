@@ -6,7 +6,7 @@ import seaborn as sns
 
 # BASE_DIR = Path(".")
 DATA_DIR = Path("./data")
-PROCESSED_DIR = DATA_DIR / "preprocessed"
+PROCESSED_DIR = DATA_DIR / "processed"
 CLEANED_DIR = PROCESSED_DIR / "cleaned_data"
 
 # Input data paths
