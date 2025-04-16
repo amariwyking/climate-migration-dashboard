@@ -11,13 +11,8 @@
 7. Create an .env and file and add your `US_CENSUS_API_KEY` and postgresSQL `DATABASE_URL` to it.
 8. Create directory and txt file to save postgress password `secrets\postgres_passwod.txt`.
 9. Run `.\scripts\pipeline.bat` for Windows or `./scripts/pipeline.sh` for MacOS & Linux.
-10. To start the dashboard, run `streamlit run app/main.py` from the `./climate_migration` directory like so:
+10. To start the dashboard, run `streamlit run app/main.py` from root directory.
 
-```bash
-# From the root of the repository
-cd climate_migration
-streamlit run app/main.py
-```
 
 ## Data Structure
 

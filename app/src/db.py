@@ -29,6 +29,9 @@ load_dotenv(env_file)
 # Fix Heroku connection string
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if DATABASE_URL is None:
+    raise ValueError("DATABASE_URL not found in environment variables.")
+
 # Set SSL mode based on environment
 SSL_MODE = "require" if ENVIRONMENT == "prod" else "disable"
 
