@@ -7,7 +7,7 @@ import pandas as pd
 
 def main():
     # Constants
-    output_data_dir = Path("./data/preprocessed/projected_data")
+    output_data_dir = Path("./data/processed/projected_data")
     output_data_dir.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE = output_data_dir / f"county_population_projections.csv"
 

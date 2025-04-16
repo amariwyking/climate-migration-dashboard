@@ -6,7 +6,7 @@ from typing import Dict
 
 # Configuration constants
 PATHS = {
-    "processed": Path("./data/preprocessed/cleaned_data"),
+    "processed": Path("./data/processed/cleaned_data"),
     "raw_data": {
         "economic": Path("./data/raw/economic_data"),
         "education": Path("./data/raw/education_data"),
