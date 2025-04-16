@@ -153,7 +153,7 @@ def display_housing_indicators(county_name, state_name, county_fips, db_conn):
 
     st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
     st.line_chart(db.get_county_timeseries_data(
-        db_conn, db.Table.COUNTY_HOUSING_DATA, "OCCUPIED_HOUSING_UNTIS", county_fips=county_fips))
+        db_conn, db.Table.COUNTY_HOUSING_DATA, "OCCUPIED_HOUSING_UNITS", county_fips=county_fips))
 
 
 def display_education_indicators(county_name, state_name, county_fips, db_conn):
