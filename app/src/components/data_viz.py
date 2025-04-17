@@ -11,62 +11,39 @@ from shapely import wkt
 from urllib.request import urlopen
 
 
-def migration_map(data, conn):
-    try:
-        with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
-            counties = json.load(response)
+# Define the color palette globally to avoid duplication
+RISK_COLORS_RGB = [
+    (77, 109, 189),   # #4D6DBD - Range 0-20
+    (80, 155, 199),   # #509BC7 - Range 20-40
+    (240, 213, 93),   # #F0D55D - Range 40-60
+    (224, 112, 105),  # #E07069 - Range 60-80
+    (199, 68, 93),    # #C7445D - Range 80-100
+]
 
-        df = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/fips-unemp-16.csv",
-                        dtype={"fips": str})
+# Generate color formats once
+RISK_COLORS_RGBA = [f"rgba({r}, {g}, {b}, 1)" for r, g, b in RISK_COLORS_RGB]
+RISK_COLORS_RGB_STR = [f"rgb({r}, {g}, {b})" for r, g, b in RISK_COLORS_RGB]
 
-        counties_data = db.get_county_metadata(conn)
+# Risk level labels
+RISK_LEVELS = ['Very Low', 'Low', 'Moderate', 'High', 'Very High']
 
-        counties_data = counties_data.merge(
-            db.get_population_projections_by_fips(conn),
-            how='inner',
-            on='COUNTY_FIPS'
-        )
-        
-        counties_data['GEOMETRY'] = counties_data['GEOMETRY'].apply(wkt.loads)
+# Map risk categories to colors
+RISK_COLOR_MAPPING = dict(zip(RISK_LEVELS, RISK_COLORS_RGB_STR))
 
-        fig = px.choropleth(counties_data, geojson=counties, locations='COUNTY_FIPS', color=np.log(counties_data['POPULATION_2065_S5c']),
-                            color_continuous_scale="Viridis",
-                            # range_color=(0, 12),
-                            scope="usa",
-                            labels={'POPULATION_2065_S5c': 'Population Increase'},
-                            basemap_visible=False,
-                            )
 
-        fig.update_geos(fitbounds="locations", visible=False)
+def get_risk_color(score, opacity=1.0):
+    """Get color for a risk score with specified opacity"""
+    color_index = min(int(score // 20), 4)
+    r, g, b = RISK_COLORS_RGB[color_index]
+    return f"rgba({r}, {g}, {b}, {opacity})"
 
-        fig.update_layout(
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            coloraxis_colorbar=dict(
-                orientation='v',  # 'h' for horizontal
-                thickness=30,     # Adjust thickness of the colorbar
-                len=0.6,          # Length as fraction of the plot area width
-                y=0.5,           # Position below the map (-0.1 means 10% below)
-                x=0.9,            # Center the colorbar horizontally
-                # xanchor='right',  # Anchor point for x position
-                # yanchor='top'     # Anchor point for y position
-            ),
-        )
-        
-        fig.update_traces(marker_line_width=0)
-
-        event = st.plotly_chart(fig, on_select="rerun", selection_mode=[
-            "points"])
-        
-        return event
-    except Exception as e:
-        print(f"Could not connect to url.\n{e}")
 
 def national_risk_score(county_name, state_name, county_fips):
-    # 5. Show NRI score for county and the top hazards
-    st.markdown(f"### Climate Risk Profile: {county_name}, {state_name}")
-
     # Dummy NRI data for demonstration
     nri_score = 46.8  # Example overall risk score
+
+    # Use light gray for the gauge bar
+    bar_color = "rgba(100, 100, 100, 0.8)"
 
     # Display the NRI score with a gauge chart
     fig = go.Figure(go.Indicator(
@@ -76,31 +53,40 @@ def national_risk_score(county_name, state_name, county_fips):
         title={'text': "National Risk Index Score"},
         gauge={
             'axis': {'range': [0, 100]},
-            'bar': {'color': "darkblue"},
+            'bar': {
+                'thickness': 0.5,
+                'color': bar_color,
+            },
             'steps': [
-                {'range': [0, 25], 'color': "lightgreen"},
-                {'range': [25, 50], 'color': "yellow"},
-                {'range': [50, 75], 'color': "orange"},
-                {'range': [75, 100], 'color': "red"}
+                {'range': [0, 20], 'color': RISK_COLORS_RGBA[0]},
+                {'range': [20, 40], 'color': RISK_COLORS_RGBA[1]},
+                {'range': [40, 60], 'color': RISK_COLORS_RGBA[2]},
+                {'range': [60, 80], 'color': RISK_COLORS_RGBA[3]},
+                {'range': [80, 100], 'color': RISK_COLORS_RGBA[4]},
             ]
         }
     ))
 
     st.plotly_chart(fig)
-    
+
+
 def climate_hazards(county_fips, county_name):
     # Display top hazards
-    st.markdown("#### Top Climate Hazards")
-
     hazard_data = {
         "Hazard Type": ["Extreme Heat", "Drought", "Riverine Flooding", "Wildfire", "Hurricane"],
         "Risk Score": [82.4, 64.7, 42.3, 37.8, 15.2]
     }
 
     hazards_df = pd.DataFrame(hazard_data)
-
-    # Sort by risk score
     hazards_df = hazards_df.sort_values("Risk Score", ascending=False)
+
+    # Create a color mapping based on risk score ranges
+    hazards_df['Color Category'] = pd.cut(
+        hazards_df['Risk Score'],
+        bins=[0, 20, 40, 60, 80, 100],
+        labels=RISK_LEVELS,
+        include_lowest=True
+    )
 
     # Create a horizontal bar chart
     fig = px.bar(
@@ -108,10 +94,59 @@ def climate_hazards(county_fips, county_name):
         x="Risk Score",
         y="Hazard Type",
         orientation='h',
-        color="Risk Score",
-        color_continuous_scale=["green", "yellow", "orange", "red"],
-        title=f"Climate Hazards for {county_name}",
+        color="Color Category",
+        color_discrete_map=RISK_COLOR_MAPPING,
+        title="Climate Hazards",
         labels={"Risk Score": "Risk Score (Higher = Greater Risk)"}
     )
 
+    # Improve layout
+    fig.update_layout(
+        legend_title_text="Risk Level",
+        xaxis_range=[0, 100]
+    )
+
     st.plotly_chart(fig)
+    
+def migration_map(data, conn):
+    try:
+        with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
+            counties = json.load(response)
+
+        counties_data = db.get_county_metadata(conn)
+        counties_data = counties_data.merge(
+            db.get_population_projections_by_fips(conn),
+            how='inner',
+            on='COUNTY_FIPS'
+        )
+
+        counties_data['GEOMETRY'] = counties_data['GEOMETRY'].apply(wkt.loads)
+
+        fig = px.choropleth(
+            counties_data, 
+            geojson=counties, 
+            locations='COUNTY_FIPS', 
+            color=np.log(counties_data['POPULATION_2065_S5c']),
+            color_continuous_scale="Viridis",
+            scope="usa",
+            labels={'POPULATION_2065_S5c': 'Population Increase'},
+            basemap_visible=False
+        )
+
+        fig.update_geos(fitbounds="locations", visible=False)
+        fig.update_layout(
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            coloraxis_colorbar=dict(
+                orientation='v',
+                thickness=30,
+                len=0.6,
+                y=0.5,
+                x=0.9,
+            ),
+        )
+        fig.update_traces(marker_line_width=0)
+
+        event = st.plotly_chart(fig, on_select="rerun", selection_mode=["points"])
+        return event
+    except Exception as e:
+        print(f"Could not connect to url.\n{e}")

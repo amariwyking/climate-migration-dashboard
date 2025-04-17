@@ -504,8 +504,10 @@ with st.expander("Read more", icon=":material/article:"):
 
 st.markdown("##### Key Migration Decision Factors:")
 
-st.markdown("**:material/cloud_alert: Climate Risks** - Vulnerability to climate hazards")
-st.markdown("**:material/house: Housing Cost** - Availability of affordable housing")
+st.markdown(
+    "**:material/cloud_alert: Climate Risks** - Vulnerability to climate hazards")
+st.markdown(
+    "**:material/house: Housing Cost** - Availability of affordable housing")
 st.markdown("**:material/work: Labor Demand** - Strength of local job markets")
 
 vertical_spacer(5)
@@ -536,14 +538,37 @@ else:
     county_name = state_name = county_fips = None
 
 if county_fips:
+    st.markdown("### Climate Risk Profile")
+    
     split_row(
-        lambda: national_risk_score(county_name, state_name, county_fips), 
-        lambda: climate_hazards(county_fips, county_name), 
-        [0.5, 0.5])
+        lambda: national_risk_score(county_name, state_name, county_fips),
+        lambda: climate_hazards(county_fips, county_name),
+        [0.4, 0.6])
 
     vertical_spacer(10)
 
     # 6. Show current population and projected populations of the county
+    st.markdown("""
+        ### Understanding Population Projections
+
+        The population projections shown in this dashboard represent different scenarios for how climate change might affect migration patterns and population distribution across U.S. regions by 2065.
+
+        #### What These Scenarios Mean:
+
+        **Baseline Scenarios**:
+        - **Census Projection**: Standard population growth projections without accounting for climate effects
+        - **Economic Adjustment Baseline**: Includes economic factors like wages and housing prices, but no climate migration effects
+
+        **Climate Migration Scenarios**:
+        - **Low Impact**: Represents modest climate-influenced migration (50% of projected effect)
+        - **Medium Impact**: Shows the full projected climate migration effect based on research by Fan et al.
+        - **High Impact**: Illustrates an intensified climate migration scenario (150% of projected effect)
+
+        These projections help visualize how climate change could reshape population distribution across regions, with some areas experiencing population growth (Northeast, West, California) and others facing decline (South, Midwest) due to climate-related migration pressures.
+
+        The data is derived from research on climate-induced migration patterns, which considers factors including extreme weather events, economic opportunities, and regional climate vulnerabilities.
+    """)
+
     population_historical = db.get_population_timeseries(
         db_conn, None
     )
@@ -560,9 +585,11 @@ if county_fips:
     st.markdown(
         f"The following indicators show how {county_name} may be affected by projected population changes:")
 
-    display_housing_indicators(county_name, state_name, county_fips, db_conn)
     display_education_indicators(county_name, state_name, county_fips, db_conn)
-    display_unemployment_indicators(
-        county_name, state_name, county_fips, db_conn)
-    display_unemployment_by_education(
-        county_name, state_name, county_fips, db_conn)
+    split_row(
+        lambda: display_unemployment_indicators(
+            county_name, state_name, county_fips, db_conn),
+        lambda: display_unemployment_by_education(
+            county_name, state_name, county_fips, db_conn),
+        [0.5,0.5]
+    )
