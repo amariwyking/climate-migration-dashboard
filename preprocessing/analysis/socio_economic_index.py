@@ -1,8 +1,6 @@
 import pandas as pd
 from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # BASE_DIR = Path(".")
 DATA_DIR = Path("./data")

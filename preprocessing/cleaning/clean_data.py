@@ -347,8 +347,7 @@ class DataCleaner:
             
             # Calculate HOUSE_AFFORDABILITY
             merged_data["HOUSE_AFFORDABILITY"] = (
-                merged_data["MEDIAN_HOUSING_VALUE"] / merged_data["MEDIAN_INCOME"]
-            ).round(2)
+                (merged_data["MEDIAN_GROSS_RENT"] * 12) / merged_data["MEDIAN_INCOME"])
 
             merged_data.drop(columns=["MEDIAN_INCOME"], inplace=True)
             
