@@ -15,6 +15,7 @@ PATHS = {
         "counties": Path("./data/raw/counties_data"),
         "job_openings": Path("./data/raw/monthly_job_openings_csvs_data"),
         "crime": Path("./data/raw/state_crime_data"),
+        "fema_nri": Path("./data/raw/county_fema_nri_data"),
     },
 }
 
@@ -82,7 +83,12 @@ COLUMN_MAPPINGS = {
     },
     "crime": {
         (2010, 2023): {
-            "Count_CriminalActivities_CombinedCrime": "Criminal_Activities"
+            "Count_CriminalActivities_CombinedCrime": "CRIMINAL_ACTIVITIES"
+        }
+    },
+    "fema_nri": {
+        (2021, 2023): {
+            "FemaNaturalHazardRiskIndex_NaturalHazardImpact": "FEMA_NRI"
         }
     },
 }
@@ -310,7 +316,7 @@ class DataCleaner:
         # Create output directory
         PATHS["processed"].mkdir(parents=True, exist_ok=True)
         
-        if data_type in ["economic", "education", "housing"]:
+        if data_type in ["economic", "education", "housing", "fema_nri"]:
             # Use existing method for these data types
             data = cls.load_and_process_data(data_type)
         elif data_type == "job_openings":
@@ -456,7 +462,7 @@ class DataCleaner:
 
 def main():
     # Process all types of data
-    data_types = ["economic", "education", "housing", "job_openings", "crime"]
+    data_types = ["economic", "education", "housing", "job_openings", "crime", "fema_nri"]
 
     for data_type in data_types:
         DataCleaner.process_and_save_data(data_type)
