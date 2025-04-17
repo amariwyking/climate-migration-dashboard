@@ -3,7 +3,7 @@ import pandas as pd
 import censusdis.data as ced
 import datacommons as dc
 from dotenv import load_dotenv
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 import os
 import concurrent.futures
 import time
@@ -66,12 +66,16 @@ CONFIG = {
         },
         "CRIME": {
             "DATA_SOURCE": "datacommons",
-            "YEARS": (
-                2010,
-                2023,
-            ),  # The range will be automatically filtered by available data
+            "YEARS": (2010, 2023),
             "VARIABLES": ["Count_CriminalActivities_CombinedCrime"],
             "STATE_RANGE": (1, 80),  # Range of state IDs to try
+            "LEVEL": "state",  # Indicates state-level data
+        },
+        "FEMA_NRI": {
+            "DATA_SOURCE": "datacommons",
+            "YEARS": (2021, 2023),
+            "VARIABLES": ["FemaNaturalHazardRiskIndex_NaturalHazardImpact"],
+            "LEVEL": "county",  # Indicates county-level data
         },
         "COUNTIES": {
             "DATASET": "acs/acs5",
@@ -80,6 +84,7 @@ CONFIG = {
         },
     },
     "MAX_WORKERS": min(32, (os.cpu_count() or 1) + 4),  # Optimized concurrency
+    "MAX_COUNTY_WORKERS": min(50, (os.cpu_count() or 1) * 2),  # Specific for county downloads
 }
 
 
@@ -87,6 +92,7 @@ class DataDownloader:
     def __init__(self):
         self._validate_api_key()
         self.contiguous_states = self._get_contiguous_states()
+        self.counties_by_state = self._get_counties_by_state()
 
     def _validate_api_key(self):
         if not CONFIG["US_CENSUS_API_KEY"]:
@@ -114,6 +120,34 @@ class DataDownloader:
 
         state_df = pd.read_csv(state_file)
         return state_df["STATE"].astype(str).str.zfill(2).tolist()
+    
+    def _get_counties_by_state(self) -> Dict[str, List[str]]:
+        """Get a mapping of state codes to their county codes"""
+        counties_data_dir = CONFIG["BASE_DATA_DIR"] / "county_data"
+        counties_data_dir.mkdir(parents=True, exist_ok=True)
+        counties_file = counties_data_dir / "county_names.csv"
+        
+        if not counties_file.exists():
+            # Download county data
+            counties_df = ced.download(
+                "acs/acs5",
+                2010,
+                state=self.contiguous_states,
+                county="*",
+                download_variables=["NAME"],
+                api_key=CONFIG["US_CENSUS_API_KEY"],
+            )
+            counties_df.to_csv(counties_file, index=False)
+        
+        counties_df = pd.read_csv(counties_file)
+        
+        # Create dictionary mapping state to county codes
+        counties_by_state = {}
+        for state in self.contiguous_states:
+            state_counties = counties_df[counties_df["STATE"] == int(state)]["COUNTY"].astype(str).str.zfill(3).tolist()
+            counties_by_state[state] = state_counties
+            
+        return counties_by_state
 
     @staticmethod
     def _get_years_from_range(year_range: Tuple[int, int]) -> List[int]:
@@ -149,8 +183,8 @@ class DataDownloader:
         """Download a single dataset for a specific year"""
         dataset_config = CONFIG["DATASETS"][dataset]
 
-        # Skip if dataset is CRIME - it's handled separately
-        if dataset == "CRIME":
+        # Skip if dataset is from Data Commons - it's handled separately
+        if dataset_config.get("DATA_SOURCE") == "datacommons":
             return
 
         data_dir = CONFIG["BASE_DATA_DIR"] / f"{dataset.lower()}_data"
@@ -183,12 +217,13 @@ class DataDownloader:
 
     def _download_dataset(self, dataset: str) -> None:
         """Parallel download handler for a dataset"""
-        # Handle crime dataset separately
-        if dataset == "CRIME":
-            self._download_crime_data()
+        dataset_config = CONFIG["DATASETS"][dataset]
+        
+        # Handle Data Commons datasets
+        if dataset_config.get("DATA_SOURCE") == "datacommons":
+            self._download_datacommons_dataset(dataset)
             return
 
-        dataset_config = CONFIG["DATASETS"][dataset]
         years = self._get_years_from_range(dataset_config["YEARS"])
 
         # Use concurrent futures for parallel downloading
@@ -204,82 +239,177 @@ class DataDownloader:
             # Wait for all futures to complete
             concurrent.futures.wait(futures)
 
-    def _download_crime_data(self) -> None:
-        """Download crime data from Data Commons API"""
-        crime_config = CONFIG["DATASETS"]["CRIME"]
-        state_crime_output_dir = CONFIG["BASE_DATA_DIR"] / "state_crime_data"
-        os.makedirs(state_crime_output_dir, exist_ok=True)
-
-        # Get list of years within the specified range
-        years_range = range(crime_config["YEARS"][0], crime_config["YEARS"][1] + 1)
-
+    def _download_datacommons_dataset(self, dataset: str) -> None:
+        """Generalized method to download data from Data Commons API"""
+        dataset_config = CONFIG["DATASETS"][dataset]
+        
+        # Determine the level (state or county) and set the appropriate subdirectory name
+        level = dataset_config.get("LEVEL", "state")  # Default to state if not specified
+        
+        # Set up output directory
+        output_dir = CONFIG["BASE_DATA_DIR"] / f"{level}_{dataset.lower()}_data"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Get years range
+        years_range = range(dataset_config["YEARS"][0], dataset_config["YEARS"][1] + 1)
+        
         # Check which years already exist
         existing_files = {
             int(f.stem.split("_")[-1]): f
-            for f in state_crime_output_dir.glob("state_crime_data_*.csv")
+            for f in output_dir.glob(f"{level}_{dataset.lower()}_data_*.csv")
         }
-
+        
         # Skip if all years exist
         if all(year in existing_files for year in years_range):
-            print("All crime data files already exist, skipping download")
+            print(f"All {dataset} data files already exist, skipping download")
             return
-
-        print("Downloading missing crime data from Data Commons...")
-
-        # Create a dictionary to store data by year
-        crime_data_by_year = {}
-
-        # Collect data for all states
-        state_range = crime_config["STATE_RANGE"]
-        for state_id in range(state_range[0], state_range[1]):
-            state_fips = f"{state_id:02d}"
-
-            # Skip excluded states
-            if state_fips in CONFIG["EXCLUDED_STATES"]:
-                print(f"Skipping excluded state with FIPS: {state_fips}")
-                continue
-
-            try:
-                print(f"Fetching crime data for (FIPS: {state_fips})...")
-                data = dc.get_stat_series(
-                    f"geoId/{state_fips}",
-                    crime_config["VARIABLES"][
-                        0
-                    ],  # Using the first variable in the list
-                )
-
-                if data:  # Check if data exists
-                    # For each year in the state's data
-                    for year, value in data.items():
-                        year_int = int(year)  # Convert year to integer for comparison
-
-                        # Only process years that don't already exist and are within range
-                        if (
-                            crime_config["YEARS"][0]
-                            <= year_int
-                            <= crime_config["YEARS"][1]
-                            and year_int not in existing_files
-                        ):
-                            if year not in crime_data_by_year:
-                                crime_data_by_year[year] = []
-
-                            crime_data_by_year[year].append(
-                                {
-                                    "STATE": state_fips,
-                                    crime_config["VARIABLES"][0]: value,
-                                }
-                            )
-            except Exception as e:
-                print(f"Error fetching crime data for (FIPS: {state_fips}): {str(e)}")
-                continue
-
-        # Save separate CSV files for each year that doesn't already exist
-        for year, data in crime_data_by_year.items():
+        
+        print(f"Downloading missing {dataset} data from Data Commons...")
+        
+        # Create a dictionary to store all data (global to all threads)
+        all_data = {year: [] for year in years_range if year not in existing_files}
+        
+        # Process based on level (state or county)
+        if level == "state":
+            # State level data - use state_range if available
+            state_range = dataset_config.get("STATE_RANGE", (1, 80))  # Default state range
+            
+            # Create a list of state IDs to process
+            state_ids = [
+                f"{state_id:02d}" 
+                for state_id in range(state_range[0], state_range[1])
+                if f"{state_id:02d}" not in CONFIG["EXCLUDED_STATES"]
+            ]
+            
+            # Process states in parallel
+            with concurrent.futures.ThreadPoolExecutor(max_workers=CONFIG["MAX_WORKERS"]) as executor:
+                futures = []
+                for state_fips in state_ids:
+                    futures.append(
+                        executor.submit(
+                            self._fetch_datacommons_for_geo,
+                            geo_id=f"geoId/{state_fips}",
+                            variables=dataset_config["VARIABLES"],
+                            all_data=all_data,
+                            years_range=years_range,
+                            existing_files=existing_files,
+                            state=state_fips
+                        )
+                    )
+                
+                # Wait for all futures to complete
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        print(f"Error in thread: {str(e)}")
+                        
+        elif level == "county":
+            # County level data - create a list of all county tasks
+            county_tasks = []
+            
+            for state_fips in self.contiguous_states:
+                for county_fips in self.counties_by_state.get(state_fips, []):
+                    county_tasks.append((state_fips, county_fips))
+            
+            # Process counties in parallel using a thread pool
+            with concurrent.futures.ThreadPoolExecutor(max_workers=CONFIG["MAX_COUNTY_WORKERS"]) as executor:
+                futures = []
+                
+                for state_fips, county_fips in county_tasks:
+                    geo_id = f"geoId/{state_fips}{county_fips}"
+                    futures.append(
+                        executor.submit(
+                            self._fetch_datacommons_for_geo,
+                            geo_id=geo_id,
+                            variables=dataset_config["VARIABLES"],
+                            all_data=all_data,
+                            years_range=years_range,
+                            existing_files=existing_files,
+                            state=state_fips,
+                            county=county_fips
+                        )
+                    )
+                
+                # Use a progress counter
+                completed = 0
+                total = len(futures)
+                
+                # Wait for all futures to complete while showing progress
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        future.result()
+                        completed += 1
+                        if completed % 50 == 0 or completed == total:
+                            print(f"Progress: {completed}/{total} counties processed ({completed/total*100:.1f}%)")
+                    except Exception as e:
+                        print(f"Error in county download thread: {str(e)}")
+                        completed += 1
+        
+        # Save separate CSV files for each year
+        for year, data in all_data.items():
             if data:
                 df = pd.DataFrame(data)
-                file_path = state_crime_output_dir / f"state_crime_data_{year}.csv"
+                file_path = output_dir / f"{level}_{dataset.lower()}_data_{year}.csv"
                 df.to_csv(file_path, index=False)
-                print(f"Saved crime data for year {year} with {len(df)} records")
+                print(f"Saved {dataset} data for year {year} with {len(df)} records")
+    
+    def _fetch_datacommons_for_geo(
+        self, 
+        geo_id: str, 
+        variables: List[str], 
+        all_data: Dict,
+        years_range: range,
+        existing_files: Dict,
+        state: str,
+        county: Optional[str] = None
+    ) -> None:
+        """Fetch Data Commons data for a specific geography"""
+        try:
+            geo_name = f"FIPS: {state}" if county is None else f"FIPS: {state}{county}"
+            
+            # Only print for state-level data to reduce console noise
+            if county is None:
+                print(f"Fetching data for {geo_name}...")
+            
+            # Process variables in sequence (Data Commons API might have rate limits)
+            for variable in variables:
+                data = dc.get_stat_series(geo_id, variable) 
+                
+                if data:  # Check if data exists
+                    # For each year in the data
+                    for year, value in data.items():
+                        if len(year) != 4:
+                            year = year[:4]  # Ensure year is 4 digits
+                        year_int = int(year)  # Convert year to integer for comparison
+                        
+                        # For debugging
+                        if county is None:  # Only print for state-level to reduce noise
+                            print(f"Processing year {year_int} for {geo_id}, variable {variable}")
+                        
+                        # Only process years that are within range and don't already exist in files
+                        if (
+                            year_int in years_range
+                            and year_int not in existing_files
+                        ):
+                            entry = {
+                                "STATE": state,
+                                variable: value,
+                            }
+                            
+                            # Add county if applicable
+                            if county:
+                                entry["COUNTY"] = county
+                                
+                            # Thread-safe append to the data dictionary - use year_int directly
+                            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as lock_executor:
+                                lock_executor.submit(lambda: all_data[year_int].append(entry))
+        except Exception as e:
+            if county is None:
+                print(f"Error fetching data for {geo_id}: {str(e)}")
+            # For county-level errors, only log if it's a significant error (to reduce noise)
+            elif "404" not in str(e):  # Ignore common 404 errors for counties
+                print(f"Error for {geo_id}: {str(e)[:100]}...")
 
     def download_all_data(self):
         """Download all datasets with timing"""
