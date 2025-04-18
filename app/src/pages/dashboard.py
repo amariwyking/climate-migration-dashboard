@@ -519,7 +519,7 @@ st.markdown(
 # TODO: Can we package the county name and FIPS code in the selectbox?
 default_county_fips = '36029'
 
-county = st.selectbox(
+county = st.sidebar.selectbox(
     'Select a county',
     counties.NAME,
     placeholder='Type to search...',
