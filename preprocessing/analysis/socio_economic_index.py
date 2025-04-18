@@ -94,7 +94,7 @@ def main():
     
     # Define columns to normalize for each category
     normalization_config = {
-        'crime': ['Criminal_Activities'],
+        'crime': ['CRIMINAL_ACTIVITIES'],
         'economic': ['MEDIAN_INCOME', 'UNEMPLOYMENT_RATE', 'TOTAL_EMPLOYED_POPULATION'],
         'education': ['BACHELORS_OR_HIGHER_TOTAL', 'TOTAL_ENROLLED', 'LESS_THAN_HIGH_SCHOOL_UNEMPLOYED'],
         'housing': ['MEDIAN_HOUSING_VALUE', 'MEDIAN_GROSS_RENT', 'HOUSE_AFFORDABILITY'],
