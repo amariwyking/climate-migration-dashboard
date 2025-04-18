@@ -4,7 +4,7 @@ from src.utils import add_custom_css
 
 st.set_page_config(
     layout="wide",
-    initial_sidebar_state='collapsed',
+    initial_sidebar_state='expanded',
 )
 add_custom_css()
 
