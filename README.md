@@ -1,52 +1,104 @@
-# climate-migration-dashboard
+# Climate Migration Dashboard
 
-## Windows Setup
+An interactive dashboard for analyzing climate-driven migration patterns across the United States.
 
-1. Clone the repo.
-2. Create a virtual environment: `python -m venv .venv`.
-3. Activate it: `.venv\Scripts\activate`.
-4. Install dependencies: `pip install -r requirements.txt`.
-5. Install Docker desktop.
-6. Run `docker-compose up -d` to run container and `docker-compose down` to stop container when done with project.
-7. Create an .env and file and add your `US_CENSUS_API_KEY` and postgresSQL `DATABASE_URL` to it.
-8. Create directory and txt file to save postgress password `secrets\postgres_passwod.txt`.
-9. Make sure `.\data\raw` directory have manually downlaoded data in it which was not available through scripts.
-10. Run `.\scripts\pipeline.bat` for Windows or `./scripts/pipeline.sh` for MacOS & Linux.
-11. To start the dashboard, run `streamlit run app/main.py` from root directory.
+## Prerequisites
 
+- Python 3.8 or higher
+- Docker Desktop
+- US Census API key
+- PostgreSQL
+
+## Setup Instructions
+
+### Windows
+
+1. Clone the repository:
+   ```
+   git clone [repository-url]
+   cd climate-migration-dashboard
+   ```
+
+2. Set up Python environment:
+   ```
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. Configure Docker:
+   - Install Docker Desktop
+   - Start Docker containers: `docker-compose up -d`
+   - Stop containers when done: `docker-compose down`
+
+4. Configure environment variables:
+   - Create `.env` file in root directory
+   - Add the following variables:
+     ```
+     US_CENSUS_API_KEY=your_api_key_here
+     DATABASE_URL=your_postgres_connection_string
+     ```
+
+5. Set up secrets:
+   ```
+   mkdir secrets
+   echo "your_postgres_password" > secrets\postgres_password.txt
+   ```
+
+6. Prepare data:
+   - Ensure `.\data\raw` directory contains required manual downloads:
+     - `monthly_job_openings_xlsx_data`
+     - `decennial_county_population_data_1900_1990.csv`
+
+7. Run data pipeline:
+   - Windows: `.\scripts\pipeline.bat`
+   - MacOS/Linux: `./scripts/pipeline.sh`
+
+8. Launch dashboard:
+   ```
+   streamlit run app/main.py
+   ```
 
 ## Data Structure
 
-### Raw Data
+### Raw Data Sources
 
-- **Downloaded using scripts**:
-  - `counties_data`
-  - `economic_data`
-  - `education_data`
-  - `housing_data`
-  - `population_data`
-  - `state_crime_data`
-  - `state_data`
+#### Automatically Downloaded
+- Counties data
+- Economic indicators
+- Education statistics
+- Housing metrics
+- Population data
+- State crime statistics
+- State-level data
 
-- **Downloaded manually**:
-  - `monthly_job_openings_xlsx_data`
-  - `decennial_county_population_data_1900_1990.csv`
+#### Manual Downloads Required
+- Monthly job openings (XLSX format)
+- Historical county population data (1900-1990)
 
-### Cleaned Data
+### Processed Data
 
-- **Processed**:
-  - **Combined and saved**:
-    - `cleaned_economic_data.csv`
-    - `cleaned_education_data.csv`
-    - `cleaned_housing_data.csv`
-    - `cleaned_crime_data.csv`
-    - `cleaned_job_openings_data.csv`
-    - `socioeconomic_indices.csv`
-    - `socioeconomic_indices_rankings.csv`
-    - `timeseries_population.csv`
-  - **Separate yearly data saved**:
-    - `counties_with_geometry`
+#### Combined Datasets
+- `cleaned_economic_data.csv`
+- `cleaned_education_data.csv`
+- `cleaned_housing_data.csv`
+- `cleaned_crime_data.csv`
+- `cleaned_job_openings_data.csv`
+- `socioeconomic_indices.csv`
+- `socioeconomic_indices_rankings.csv`
+- `timeseries_population.csv`
 
-- **Projected Data**:
-  - `county_population_projections.csv`
-  
+#### Geographic Data
+- `counties_with_geometry` (yearly data)
+
+#### Projections
+- `county_population_projections.csv`
+
+## Troubleshooting
+
+If you encounter issues:
+
+- Ensure Docker Desktop is running
+- Verify all environment variables are set correctly
+- Check if required data files exist in `.\data\raw`
+- Confirm PostgreSQL connection string is valid
