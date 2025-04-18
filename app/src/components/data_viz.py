@@ -1,4 +1,5 @@
 import json
+from sqlalchemy import Connection
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -38,9 +39,11 @@ def get_risk_color(score, opacity=1.0):
     return f"rgba({r}, {g}, {b}, {opacity})"
 
 
-def national_risk_score(county_name, state_name, county_fips):
+def national_risk_score(conn: Connection, county_fips):
+    fema_df = db.get_stat_var(conn, db.Table.COUNTY_FEMA_DATA, "FEMA_NRI", county_fips, 2023)
+    
     # Dummy NRI data for demonstration
-    nri_score = 46.8  # Example overall risk score
+    nri_score = fema_df["FEMA_NRI"].iloc[0]
 
     # Use light gray for the gauge bar
     bar_color = "rgba(100, 100, 100, 0.8)"
@@ -108,7 +111,7 @@ def climate_hazards(county_fips, county_name):
 
     st.plotly_chart(fig)
     
-def migration_map(data, conn):
+def migration_map(data, conn: Connection):
     try:
         with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
             counties = json.load(response)

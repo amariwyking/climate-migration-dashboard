@@ -140,19 +140,19 @@ def display_housing_indicators(county_name, state_name, county_fips, db_conn):
     st.header('Housing Analysis', divider=True)
 
     st.write(f"### Median Gross Rent for {county_name}, {state_name}")
-    st.line_chart(db.get_county_timeseries_data(
+    st.line_chart(db.get_stat_var(
         db_conn, db.Table.COUNTY_HOUSING_DATA, "MEDIAN_GROSS_RENT", county_fips=county_fips))
 
     st.write(f"### Median House Value for {county_name}, {state_name}")
-    st.line_chart(db.get_county_timeseries_data(
+    st.line_chart(db.get_stat_var(
         db_conn, db.Table.COUNTY_HOUSING_DATA, "MEDIAN_HOUSING_VALUE", county_fips=county_fips))
 
     st.write(f"### Total Housing Units for {county_name}, {state_name}")
-    st.line_chart(db.get_county_timeseries_data(
+    st.line_chart(db.get_stat_var(
         db_conn, db.Table.COUNTY_HOUSING_DATA, "TOTAL_HOUSING_UNITS", county_fips=county_fips))
 
     st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
-    st.line_chart(db.get_county_timeseries_data(
+    st.line_chart(db.get_stat_var(
         db_conn, db.Table.COUNTY_HOUSING_DATA, "OCCUPIED_HOUSING_UNITS", county_fips=county_fips))
 
 
@@ -160,15 +160,15 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
     st.header('Education Analysis', divider=True)
 
     # Retrieve all the educational attainment data needed for the chart
-    less_than_hs_df = db.get_county_timeseries_data(
+    less_than_hs_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
-    hs_graduate_df = db.get_county_timeseries_data(
+    hs_graduate_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_TOTAL", county_fips=county_fips)
-    some_college_df = db.get_county_timeseries_data(
+    some_college_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
-    bachelors_higher_df = db.get_county_timeseries_data(
+    bachelors_higher_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
-    total_pop_25_64_df = db.get_county_timeseries_data(
+    total_pop_25_64_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "TOTAL_POPULATION_25_64", county_fips=county_fips)
 
     # Combine all dataframes into one
@@ -267,11 +267,11 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
     # Retrieve the unemployment data needed for the chart
     # Using the same pattern as your education function but with economic data table
-    total_labor_force_df = db.get_county_timeseries_data(
+    total_labor_force_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_ECONOMIC_DATA, "TOTAL_LABOR_FORCE", county_fips=county_fips)
-    unemployed_persons_df = db.get_county_timeseries_data(
+    unemployed_persons_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYED_PERSONS", county_fips=county_fips)
-    unemployment_rate_df = db.get_county_timeseries_data(
+    unemployment_rate_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYMENT_RATE", county_fips=county_fips)
 
     # Combine all dataframes into one
@@ -345,23 +345,23 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
 
     # Retrieve raw counts for each education level - both unemployed and total population
     # Unemployed counts
-    less_than_hs_unemployed_df = db.get_county_timeseries_data(
+    less_than_hs_unemployed_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_UNEMPLOYED", county_fips=county_fips)
-    hs_graduate_unemployed_df = db.get_county_timeseries_data(
+    hs_graduate_unemployed_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_UNEMPLOYED", county_fips=county_fips)
-    some_college_unemployed_df = db.get_county_timeseries_data(
+    some_college_unemployed_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_UNEMPLOYED", county_fips=county_fips)
-    bachelors_higher_unemployed_df = db.get_county_timeseries_data(
+    bachelors_higher_unemployed_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_UNEMPLOYED", county_fips=county_fips)
 
     # Total population counts
-    less_than_hs_total_df = db.get_county_timeseries_data(
+    less_than_hs_total_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
-    hs_graduate_total_df = db.get_county_timeseries_data(
+    hs_graduate_total_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_TOTAL", county_fips=county_fips)
-    some_college_total_df = db.get_county_timeseries_data(
+    some_college_total_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
-    bachelors_higher_total_df = db.get_county_timeseries_data(
+    bachelors_higher_total_df = db.get_stat_var(
         db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
 
     # Combine all dataframes into one
@@ -541,7 +541,7 @@ if county_fips:
     st.markdown("### Climate Risk Profile")
     
     split_row(
-        lambda: national_risk_score(county_name, state_name, county_fips),
+        lambda: national_risk_score(db_conn, county_fips),
         lambda: climate_hazards(county_fips, county_name),
         [0.4, 0.6])
 

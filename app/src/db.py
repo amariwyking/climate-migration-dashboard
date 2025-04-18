@@ -13,6 +13,11 @@ class Table(Enum):
     COUNTY_HOUSING_DATA = "cleaned_housing_data"
     COUNTY_ECONOMIC_DATA = "cleaned_economic_data"
     COUNTY_EDUCATION_DATA = "cleaned_education_data"
+    COUNTY_CRIME_DATA = "cleaned_crime_data"
+    COUNTY_FEMA_DATA = "cleaned_fema_nri_data"
+    COUNTY_JOB_OPENING_DATA = "cleaned_job_openings_data"
+    COUNTY_SOCIOECONOMIC_INDEX_DATA = "socioeconomic_indices"
+    COUNTY_SOCIOECONOMIC_RANKING_DATA = "socioeconomic_indices_rankings"
 
     # Population related tables
     POPULATION_HISTORY = "timeseries_population"
@@ -163,9 +168,9 @@ def get_timeseries_median_gross_rent(conn, county_fips=None):
         st.stop()
 
 
-def get_county_timeseries_data(conn, table: Table, indicator_name, county_fips):
+def get_stat_var(conn, table: Table, indicator_name, county_fips, year: int = None):
     """
-    Get county time series data from the specified table
+    Get county data from a statistical variable's specified table
 
     Parameters:
     -----------
@@ -187,7 +192,7 @@ def get_county_timeseries_data(conn, table: Table, indicator_name, county_fips):
 
     try:
         # Create base query
-        query = f'SELECT "{table_name}"."Year", "{indicator_name}" FROM "{table_name}"'
+        query = f'SELECT "Year", "{indicator_name}" FROM "{table_name}"'
 
         # Initialize parameters dictionary
         params = {}
@@ -203,6 +208,10 @@ def get_county_timeseries_data(conn, table: Table, indicator_name, county_fips):
                 # For single county
                 query += " WHERE \"COUNTY_FIPS\" = :county_fips"
                 params['county_fips'] = str(county_fips)
+                
+            if year:
+                query += f' AND "Year" = :year'
+                params['year'] = year
 
         # Sort the results of the query
         query += f" ORDER BY \"{table_name}\".\"Year\" ASC"
