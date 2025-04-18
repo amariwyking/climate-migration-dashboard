@@ -478,6 +478,38 @@ db_conn = db.get_db_connection()
 
 counties = db.get_county_metadata(db_conn)
 
+population_historical = db.get_population_timeseries(
+    db_conn, None
+)
+
+population_projections = db.get_population_projections_by_fips(
+    db_conn, None)
+
+default_county_fips = '36029'
+
+with st.sidebar:
+    county = st.selectbox(
+        'Select a county',
+        counties.NAME,
+        placeholder='Type to search...',
+        index=counties.index.get_loc(default_county_fips)
+    )
+
+    impact_map = {
+        "POPULATION_2065_S3": "Baseline",
+        "POPULATION_2065_S5b": "Low",
+        "POPULATION_2065_S5a": "Medium",
+        "POPULATION_2065_S5c": "High"
+    }
+
+    selected_scenario = st.selectbox(
+        "Select a climate migration scenario:",
+        # Exclude Scenario S3 (baseline)
+        options=list(impact_map.keys()),
+        format_func=lambda sel: impact_map.get(sel),
+        index=0
+    )
+
 # Short paragraph explaining why climate migration will occur and how
 st.markdown("""
 ### Climate-Induced Migration
@@ -495,7 +527,6 @@ st.markdown("""
 st.markdown("""
             Of course, climate vulnerability won't be the only factor that drives migration decisions. While some people may consider leaving areas prone to climate hazards, research shows that economic factors like job opportunities and wages will still play a dominant role in determining if, when, and where people relocate.
             """)
-
 
 
 with st.expander("Read more", icon=":material/article:"):
@@ -516,16 +547,6 @@ vertical_spacer(5)
 st.markdown(
     "Select a county to see how it may be impacted by climate-induced migration:")
 
-# TODO: Can we package the county name and FIPS code in the selectbox?
-default_county_fips = '36029'
-
-county = st.sidebar.selectbox(
-    'Select a county',
-    counties.NAME,
-    placeholder='Type to search...',
-    index=counties.index.get_loc(default_county_fips)
-)
-
 # Get the County FIPS code, which will be used for all future queries
 if county:
     # Separate the county and state names
@@ -539,7 +560,7 @@ else:
 
 if county_fips:
     st.markdown("### Climate Risk Profile")
-    
+
     split_row(
         lambda: national_risk_score(db_conn, county_fips),
         lambda: climate_hazards(county_fips, county_name),
@@ -569,13 +590,6 @@ if county_fips:
         The data is derived from research on climate-induced migration patterns, which considers factors including extreme weather events, economic opportunities, and regional climate vulnerabilities.
     """)
 
-    population_historical = db.get_population_timeseries(
-        db_conn, None
-    )
-
-    population_projections = db.get_population_projections_by_fips(
-        db_conn, None)
-
     if not population_projections.empty:
         display_population_projections(
             county_name, state_name, county_fips, population_historical, population_projections)
@@ -591,5 +605,5 @@ if county_fips:
             county_name, state_name, county_fips, db_conn),
         lambda: display_unemployment_by_education(
             county_name, state_name, county_fips, db_conn),
-        [0.5,0.5]
+        [0.5, 0.5]
     )
