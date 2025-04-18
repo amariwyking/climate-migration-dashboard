@@ -16,6 +16,7 @@ PATHS = {
         "job_openings": Path("./data/raw/monthly_job_openings_csvs_data"),
         "crime": Path("./data/raw/state_crime_data"),
         "fema_nri": Path("./data/raw/county_fema_nri_data"),
+        "cbsa": Path("./data/raw/cbsa_data"),
     },
 }
 
@@ -194,7 +195,40 @@ class DataCleaner:
                 print(f"Error loading population data for {year}: {e}")
                 
         return county_with_pop
-
+    
+    @classmethod
+    def cbsa_data(cls) -> pd.DataFrame:
+        """Load core based statistical areas for US counties"""
+        
+        try:
+            # Get the xlsx file
+            pop_path = PATHS["raw_data"]["cbsa"] / f"cbsa_counties_data.xls"
+            
+            if not pop_path.exists():
+                raise FileNotFoundError(f"Path '{pop_path}' does not exist")
+                
+            cbsa_df = pd.read_excel(pop_path, dtype={'FIPS State Code': str, 'FIPS County Code': str}, header=2)
+            
+            cbsa_df["COUNTY_FIPS"] = cbsa_df["FIPS State Code"].str.cat(cbsa_df["FIPS County Code"])
+            cbsa_df["Year"] = 2023
+            cbsa_df = cbsa_df[["COUNTY_FIPS", "CBSA Code", "Metropolitan/Micropolitan Statistical Area", "Year"]]
+            
+            # Filter for metropolitan areas only
+            # cbsa_df = cbsa_df[cbsa_df["Metropolitan/Micropolitan Statistical Area"].eq("Metropolitan Statistical Area")]
+            
+            cbsa_df = cbsa_df.rename(columns={
+                "CBSA Code": "CBSA",
+                "Metropolitan/Micropolitan Statistical Area": "TYPE",
+            })
+            
+            # cbsa_df = cbsa_df.set_index("COUNTY_FIPS")
+            
+            return cbsa_df
+        except Exception as e:
+            print(f"Error loading CBSA data")
+            return e
+            
+        
     @classmethod
     def process_job_openings_data(cls) -> pd.DataFrame:
         """Process job openings data."""
@@ -323,6 +357,8 @@ class DataCleaner:
             data = cls.process_job_openings_data()
         elif data_type == "crime":
             data = cls.process_crime_data()
+        elif data_type == "cbsa":
+            data = cls.cbsa_data()
         else:
             print(f"Unknown data type: {data_type}")
             return
@@ -464,13 +500,16 @@ def main():
     # Process all types of data
     data_types = ["economic", "education", "housing", "job_openings", "crime", "fema_nri"]
 
-    for data_type in data_types:
+    # for data_type in data_types:
+    for data_type in ["cbsa"]:
         DataCleaner.process_and_save_data(data_type)
         
     # Process counties data separately by year
     DataCleaner.clean_counties_data()
 
     print("All data processing completed.")
+    
+    # DataCleaner.load_msa_data()
 
 
 if __name__ == "__main__":

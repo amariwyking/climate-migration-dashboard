@@ -15,6 +15,7 @@ class Table(Enum):
     COUNTY_EDUCATION_DATA = "cleaned_education_data"
     COUNTY_CRIME_DATA = "cleaned_crime_data"
     COUNTY_FEMA_DATA = "cleaned_fema_nri_data"
+    COUNTY_CBSA_DATA = "cleaned_cbsa_data"
     COUNTY_JOB_OPENING_DATA = "cleaned_job_openings_data"
     COUNTY_SOCIOECONOMIC_INDEX_DATA = "socioeconomic_indices"
     COUNTY_SOCIOECONOMIC_RANKING_DATA = "socioeconomic_indices_rankings"
@@ -260,6 +261,46 @@ def get_county_metadata(conn, county_fips=None):
 
         # Execute query and return as DataFrame
         df = pd.read_sql(query, conn).set_index("COUNTY_FIPS")
+
+        return df
+    except Exception as e:
+        st.error(f"Error loading county data counts: {str(e)}")
+        st.stop()
+        
+def get_cbsa_counties(conn, filter: str = None):
+    """
+    Get counties that belong to a metropolitan statistical area (MSA)
+
+    Parameters:
+    -----------
+    conn : database connection
+        PostgreSQL database connection
+        
+    filter : str, optional
+        Type of CBSA to filter for.
+        Valid values: 'metro', 'micro', or None (returns all)
+        Default is None.
+        
+    Returns:
+    --------
+    df : pandas.DataFrame
+        DataFrame containing the counties along with MSA data
+    """
+    
+    try:
+        query = f'SELECT "COUNTY_FIPS", "CBSA", "TYPE"  FROM {Table.COUNTY_CBSA_DATA.value}'
+
+        if filter is not None and isinstance(filter, str):
+            
+            if filter == 'metro':
+                query += f" WHERE \"TYPE\" = 'Metropolitan Statistical Area'"
+            elif filter == 'micro':
+                query += f" WHERE \"TYPE\" = 'Micropolitan Statistical Area'"
+
+        # Execute query and return as DataFrame
+        df = pd.read_sql(query, conn)
+        
+        
 
         return df
     except Exception as e:
