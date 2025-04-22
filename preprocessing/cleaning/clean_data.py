@@ -50,6 +50,12 @@ COLUMN_MAPPINGS = {
             "B23006_014E": "HIGH_SCHOOL_GRADUATE_UNEMPLOYED",
             "B23006_021E": "SOME_COLLEGE_UNEMPLOYED",
             "B23006_028E": "BACHELORS_OR_HIGHER_UNEMPLOYED",
+            "B01001_004E": "MALE_5-9", 
+            "B01001_005E": "MALE_10-14",
+            "B01001_006E": "MALE_15-17",
+            "B01001_028E": "FEMALE_5-9",
+            "B01001_029E": "FEMALE_10-14",
+            "B01001_030E": "FEMALE_15-17" 
         }
     },
     "housing": {
@@ -365,6 +371,7 @@ class DataCleaner:
         # Round numeric values
         school_data['PUBLIC_SCHOOL_STUDENTS'] = school_data['PUBLIC_SCHOOL_STUDENTS'].round()
         school_data['PUBLIC_SCHOOL_TEACHERS'] = school_data['PUBLIC_SCHOOL_TEACHERS'].round()
+        school_data['STUDENT_TEACHER_RATIO'] = school_data['PUBLIC_SCHOOL_STUDENTS'] / school_data['PUBLIC_SCHOOL_TEACHERS']
         
         # Merge with population data
         school_data_with_pop = school_data.merge(
@@ -490,6 +497,11 @@ class DataCleaner:
         processed_df[numeric_cols] = processed_df[numeric_cols].apply(
             pd.to_numeric, errors="coerce"
         )
+
+        if data_type == "education":
+            processed_df["ELEMENTARY_SCHOOL_POPULATION"] = processed_df["MALE_5-9"] + processed_df["FEMALE_5-9"]  # Ages 5–9
+            processed_df["MIDDLE_SCHOOL_POPULATION"] = processed_df["MALE_10-14"] + processed_df["FEMALE_10-14"]  # Ages 10–14
+            processed_df["HIGH_SCHOOL_POULATION"] = processed_df["MALE_15-17"] + processed_df["FEMALE_15-17"]  # Ages 15–17
 
         # Special processing for economic data
         if data_type == "economic":
