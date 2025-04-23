@@ -40,8 +40,9 @@ def get_risk_color(score, opacity=1.0):
 
 
 def national_risk_score(conn: Connection, county_fips):
-    fema_df = db.get_stat_var(conn, db.Table.COUNTY_FEMA_DATA, "FEMA_NRI", county_fips, 2023)
-    
+    fema_df = db.get_stat_var(
+        conn, db.Table.COUNTY_FEMA_DATA, "FEMA_NRI", county_fips, 2023)
+
     # Dummy NRI data for demonstration
     nri_score = fema_df["FEMA_NRI"].iloc[0]
 
@@ -103,15 +104,10 @@ def climate_hazards(county_fips, county_name):
         labels={"Risk Score": "Risk Score (Higher = Greater Risk)"}
     )
 
-    # Improve layout
-    fig.update_layout(
-        legend_title_text="Risk Level",
-        xaxis_range=[0, 100]
-    )
-
     st.plotly_chart(fig)
-    
-def migration_map(data, conn: Connection):
+
+
+def migration_map(scenario, conn: Connection):
     try:
         with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
             counties = json.load(response)
@@ -123,33 +119,175 @@ def migration_map(data, conn: Connection):
             on='COUNTY_FIPS'
         )
 
+        fema_df = db.get_stat_var(conn, db.Table.COUNTY_FEMA_DATA, "FEMA_NRI",
+                                  county_fips=counties_data['COUNTY_FIPS'].tolist(), year=2023)
+
+        counties_data = counties_data.merge(
+            fema_df, how="inner", on="COUNTY_FIPS")
+
         counties_data['geometry'] = counties_data['geometry'].apply(wkt.loads)
 
+        # Get centroids of geometries for marker placement
+        counties_data['CENTROID_LON'] = counties_data['geometry'].apply(
+            lambda geom: geom.centroid.x)
+        counties_data['CENTROID_LAT'] = counties_data['geometry'].apply(
+            lambda geom: geom.centroid.y)
+
+        # Calculate variation between scenario1 and the selected scenario
+        # Absolute difference
+        counties_data['VARIATION'] = counties_data[scenario] - \
+            counties_data['POPULATION_2065_S1']
+
+        # Percentage difference (optional)
+        counties_data['VARIATION_PCT'] = ((counties_data[scenario] - counties_data['POPULATION_2065_S1']) /
+                                          counties_data['POPULATION_2065_S1']) * 100
+
+        # Apply min-max scaling to normalize population values for marker size
+        min_pop = counties_data[scenario].min()
+        max_pop = counties_data[scenario].max()
+        counties_data['NORMALIZED_POP'] = (
+            counties_data[scenario] - min_pop) / (max_pop - min_pop)
+
+        counties_data['NRI_BUCKET'] = pd.cut(
+            counties_data['FEMA_NRI'],
+            bins=[0, 20, 40, 60, 80, 100],
+            labels=['Very Low', 'Low', 'Moderate', 'High', 'Very High'],
+            include_lowest=True
+        )
+
+        msa_counties = db.get_cbsa_counties(conn, 'metro')
+
+        msa_data = counties_data[counties_data['COUNTY_FIPS'].isin(
+            msa_counties['COUNTY_FIPS'])]
+
+        max_abs_variation = max(
+            abs(msa_data['VARIATION_PCT'].min()),
+            abs(msa_data['VARIATION_PCT'].max())
+        )
+
+        # Create choropleth base layer with county boundaries
         fig = px.choropleth(
-            counties_data, 
-            geojson=counties, 
-            locations='COUNTY_FIPS', 
-            color=np.log(counties_data['POPULATION_2065_S5c']),
-            color_continuous_scale="Viridis",
+            counties_data,
+            geojson=counties,
+            color='CLIMATE_REGION',
+            color_discrete_sequence=[
+                '#8b8d6f', '#576b80', '#534e58', '#3c232e', '#c09172'],
+            locations='COUNTY_FIPS',
             scope="usa",
-            labels={'POPULATION_2065_S5c': 'Population Increase'},
-            basemap_visible=False
+            labels={scenario: 'Population'},
+            basemap_visible=False,
+            hover_data=None,
         )
 
-        fig.update_geos(fitbounds="locations", visible=False)
+        # Optionally, you can update the legend title
         fig.update_layout(
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            coloraxis_colorbar=dict(
-                orientation='v',
-                thickness=30,
-                len=0.6,
-                y=0.5,
-                x=0.9,
+            # font_size=30,
+            title=dict(
+                text="County Population Gain w/ FEMA National Risk Index",
+                automargin=True,
+                x=0.5,  # Center the title (0 = left, 1 = right)
+                y=0.95  # Adjust vertical position
             ),
+            legend=dict(
+                title="",
+                itemsizing="constant",
+                groupclick="toggleitem",
+                tracegroupgap=20,  # Add space between legend groups
+            ),
+            margin=dict(t=100, b=50, l=50, r=50),
         )
-        fig.update_traces(marker_line_width=0)
 
-        event = st.plotly_chart(fig, on_select="rerun", selection_mode=["points"])
+        fig.update_layout(
+            legend=dict(
+                yanchor="top",
+                y=0.8,
+                xanchor="left",
+                x=1.01,
+                orientation="v"
+            )
+        )
+
+        # Create the scatter_geo trace
+        scatter_fig = px.scatter_geo(
+            msa_data,
+            lat='CENTROID_LAT',
+            lon='CENTROID_LON',
+            size='NORMALIZED_POP',
+            size_max=70,
+            color='NRI_BUCKET',
+            color_discrete_sequence=[
+                '#ADD8E6', '#90EE90', '#FFA500', '#FF69B4', '#D1001B'],
+            custom_data=['COUNTY_FIPS', scenario,
+                         'POPULATION_2065_S5b', 'VARIATION', 'VARIATION_PCT'],
+            category_orders={'NRI_BUCKET': [
+                'Very Low', 'Low', 'Moderate', 'High', 'Very High']}  # Ensure consistent order
+        )
+
+        # Add all traces from the scatter figure to the main figure
+        for scatter_trace in scatter_fig.data:
+            # Update the hover template for each trace
+            scatter_trace.hovertemplate = (
+                "FIPS: %{customdata[0]}<br>" +
+                f"{scenario}: %{{customdata[1]}}<br>" +
+                "Scenario 1: %{customdata[2]}<br>" +
+                "Difference: %{customdata[3]:.2f}<br>" +
+                "% Change: %{customdata[4]:.2f}%<br>" +
+                "<extra></extra>"
+            )
+
+            # Add the trace to your existing figure
+            fig.add_trace(scatter_trace)
+
+        fig.update_geos(
+            fitbounds="locations",
+            bgcolor='rgba(0,0,0,0)',     # Transparent background
+            projection_type='albers usa',  # Keep USA projection for proper focus
+            projection_scale=0.5,
+            scope="usa",
+        )
+
+        # Make county boundaries visible but subtle
+        fig.update_traces(
+            marker_line_width=0,
+            selector=dict(type='choropleth')
+        )
+
+        fig.for_each_trace(
+            lambda trace: trace.update(legendgroup=None, showlegend=True)
+        )
+
+        fig.for_each_trace(
+            lambda trace: trace.update(
+                legendgroup="climate_regions",
+                legendgrouptitle=dict(
+                    text="Climate Regions",
+                ),
+                showlegend=True
+            ) if trace.type == 'choropleth' else None
+        )
+
+        # Update the scatter traces to use a different legend group
+        fig.for_each_trace(
+            lambda trace: trace.update(
+                legendgroup="risk_levels",
+                legendgrouptitle=dict(
+                    text="FEMA National Risk Index",
+                ),
+                showlegend=True,
+                marker=dict(
+                    size=trace.marker.size,  # Keep existing size
+                    color=trace.marker.color,  # Keep existing color
+                    line=dict(width=0, color='black'),
+                )
+            ) if trace.type == 'scattergeo' else None
+        )
+
+        # fig.write_image('/Users/amarigarrett/Developer/climate-migration-dashboard/plot.png',
+        #                 format='png', scale=2, width=2000, height=1200)
+
+        event = st.plotly_chart(fig, on_select="ignore",
+                                selection_mode=["points"])
+
         return event
     except Exception as e:
         print(f"Could not connect to url.\n{e}")

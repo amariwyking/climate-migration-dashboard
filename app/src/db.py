@@ -192,20 +192,23 @@ def get_stat_var(conn, table: Table, indicator_name, county_fips, year: int = No
     table_name = table.value
 
     try:
-        # Create base query
-        query = f'SELECT "Year", "{indicator_name}" FROM "{table_name}"'
-
         # Initialize parameters dictionary
         params = {}
 
         # Add COUNTY_FIPS filter if provided
         if county_fips is not None:
             if isinstance(county_fips, list):
+                # Create base query
+                query = f'SELECT "Year", "{indicator_name}", "COUNTY_FIPS" FROM "{table_name}"'
+                
                 # For multiple counties
                 query += " WHERE \"COUNTY_FIPS\" IN :county_fips"
                 params['county_fips'] = tuple(
                     str(fips) for fips in county_fips)
             else:
+                # Create base query
+                query = f'SELECT "Year", "{indicator_name}" FROM "{table_name}"'
+                
                 # For single county
                 query += " WHERE \"COUNTY_FIPS\" = :county_fips"
                 params['county_fips'] = str(county_fips)
@@ -249,7 +252,7 @@ def get_county_metadata(conn, county_fips=None):
         DataFrame containing county metadata
     """
     try:
-        query = f"SELECT * FROM {Table.COUNTY_CBSA_DATA.value}"
+        query = f"SELECT * FROM {Table.COUNTY_METADATA.value}"
         params = {}
 
         # Add COUNTY_FIPS filter if provided

@@ -142,6 +142,7 @@ def main():
     qf_2065_regional_population_shares = pd.DataFrame(
         {
             "Census_2010": [18.70, 20.77, 39.13, 8.84, 12.56],
+            "Scenario_1": [12.48, 14.10, 46.23, 13.72, 13.47],
             "Scenario_3": [15.05, 21.33, 41.53, 8.78, 13.31],
             "Scenario_5": [16.42, 20.35, 38.18, 10.07, 14.98],
         },
@@ -150,6 +151,14 @@ def main():
 
     climate_region_shares = climate_region_shares.merge(
         qf_2065_regional_population_shares, left_index=True, right_index=True
+    )
+
+    # Calculate 2065 population projections for Scenario 1
+    climate_region_populations["POPULATION_2065_S1"] = (
+        qf_2065_regional_population_shares["Scenario_1"]
+        .divide(100)
+        .multiply(CENSUS_POP_2065)
+        .astype(int)
     )
 
     # Calculate 2065 population projections for Scenario 3
@@ -221,6 +230,7 @@ def main():
         climate_region = row["CLIMATE_REGION"]
         migration_scenarios = climate_region_populations[
             [
+                "POPULATION_2065_S1",
                 "POPULATION_2065_S3",
                 "POPULATION_2065_S5b",
                 "POPULATION_2065_S5a",

@@ -501,7 +501,7 @@ Climate change is increasingly driving population shifts across the United State
 """)
 
 # Climate migration choropleth of US counties
-migration_map(None, db_conn)
+migration_map(selected_scenario, db_conn)
 
 
 # Explain factors that will affect the magnitude of climate-induced migration
@@ -581,8 +581,8 @@ if selected_county_fips:
     st.markdown(
         f"The following indicators show how {county_name} may be affected by projected population changes:")
 
-    display_education_indicators(
-        county_name, state_name, selected_county_fips, db_conn)
+    display_education_indicators(county_name, state_name, selected_county_fips, db_conn)
+    
     split_row(
         lambda: display_unemployment_indicators(
             county_name, state_name, selected_county_fips, db_conn),
