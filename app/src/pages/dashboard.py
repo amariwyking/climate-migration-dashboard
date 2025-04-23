@@ -512,7 +512,6 @@ st.markdown("""
             Of course, climate vulnerability won't be the only factor that drives migration decisions. While some people may consider leaving areas prone to climate hazards, research shows that economic factors like job opportunities and wages will still play a dominant role in determining if, when, and where people relocate.
             """)
 
-
 with st.expander("Read more", icon=":material/article:"):
     st.markdown("""When regions experiencing population loss due to climate concerns face labor shortages, wages tend to rise, creating an economic incentive for some people to stay or even move into these areas despite climate risks. Housing prices also adjust, becoming more affordable in areas experiencing outmigration, which further complicates migration patterns. This economic "dampening effect" means that even highly climate-vulnerable counties won't see mass exoduses, as financial considerations, family ties, and community connections often outweigh climate concerns in people's decision-making process. Migration is ultimately a complex interplay of climate, economic, social, and personal factors rather than a simple response to climate vulnerability alone.""")
 
@@ -543,7 +542,7 @@ else:
 
 if selected_county_fips:
     st.markdown("### Climate Risk Profile")
-
+    
     split_row(
         lambda: national_risk_score(db_conn, selected_county_fips),
         lambda: climate_hazards(selected_county_fips, county_name),
@@ -573,9 +572,9 @@ if selected_county_fips:
         The data is derived from research on climate-induced migration patterns, which considers factors including extreme weather events, economic opportunities, and regional climate vulnerabilities.
     """)
 
-    if not population_projections.empty:
-        display_population_projections(
-            county_name, state_name, selected_county_fips, population_historical, population_projections)
+    # if not population_projections.empty:
+    #     display_population_projections(
+    #         county_name, state_name, selected_county_fips, population_historical, population_projections)
 
     # 7. Show socioeconomic indicator analyses
     st.markdown("### Socioeconomic Indicators Analysis")
