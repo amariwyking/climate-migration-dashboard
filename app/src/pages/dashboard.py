@@ -491,7 +491,7 @@ with st.sidebar:
         population_projections.loc[selected_county_fips],
         selected_scenario
     )
-    
+
     national_risk_score(db_conn, selected_county_fips)
 
 # Short paragraph explaining why climate migration will occur and how
@@ -500,11 +500,6 @@ st.markdown("""
 Climate change is increasingly driving population shifts across the United States. As extreme weather events become more frequent and severe, communities around the country face challenges including sea-level rise, extreme heat, drought, wildfires, and flooding. These environmental pressures are expected to force increasingly more people to relocate from high-risk areas to regions with better climate resilience, impacting local economies, housing markets, and public services.
 """)
 
-# Climate migration choropleth of US counties
-migration_map(selected_scenario, db_conn)
-
-
-# Explain factors that will affect the magnitude of climate-induced migration
 st.markdown("""
             ### Climate Vulnerability Isn't the Whole Story
             """)
@@ -512,17 +507,20 @@ st.markdown("""
             Of course, climate vulnerability won't be the only factor that drives migration decisions. While some people may consider leaving areas prone to climate hazards, research shows that economic factors like job opportunities and wages will still play a dominant role in determining if, when, and where people relocate.
             """)
 
-with st.expander("Read more", icon=":material/article:"):
-    st.markdown("""When regions experiencing population loss due to climate concerns face labor shortages, wages tend to rise, creating an economic incentive for some people to stay or even move into these areas despite climate risks. Housing prices also adjust, becoming more affordable in areas experiencing outmigration, which further complicates migration patterns. This economic "dampening effect" means that even highly climate-vulnerable counties won't see mass exoduses, as financial considerations, family ties, and community connections often outweigh climate concerns in people's decision-making process. Migration is ultimately a complex interplay of climate, economic, social, and personal factors rather than a simple response to climate vulnerability alone.""")
+st.markdown("""
+            - **:material/house: Housing Cost** - Availability of affordable housing
+            - **:material/work: Labor Demand** - Strength of local job markets
+            - **:material/cloud_alert: Climate Risks** - Vulnerability to climate hazards
+            """)
+
+# Climate migration choropleth of US counties
+migration_map(selected_scenario, db_conn)
 
 
-st.markdown("##### Key Migration Decision Factors:")
+# Explain factors that will affect the magnitude of climate-induced migration
 
-st.markdown(
-    "**:material/cloud_alert: Climate Risks** - Vulnerability to climate hazards")
-st.markdown(
-    "**:material/house: Housing Cost** - Availability of affordable housing")
-st.markdown("**:material/work: Labor Demand** - Strength of local job markets")
+with st.expander("Read more about migration factors", icon=":material/article:"):
+    st.markdown("""When regions experiencing population loss due to climate concerns face labor shortages, wages tend to rise, creating an economic incentive for some people to stay or even move into these areas despite climate risks. Housing prices also adjust, becoming more affordable in areas experiencing outmigration, which further complicates migration patterns. This economic "dampening effect" means that even highly climate-vulnerable counties won't see mass exoduses, as financial considerations, family ties, and community connections often outweigh climate concerns in people's decision-making process. Migration is ultimately a complex interplay of climate, economic, social, and personal factors rather than a simple response to climate vulnerability alone. The key migration decision factors included in this model are:""")
 
 vertical_spacer(5)
 
@@ -532,13 +530,13 @@ st.markdown(
 
 # Get the County FIPS code, which will be used for all future queries
 if selected_county_fips:
-    county_metadata = db.get_county_metadata(
+    county_metadata=db.get_county_metadata(
         db_conn, selected_county_fips).iloc[0]
     # Separate the county and state names
-    full_name = county_metadata['NAME']
-    county_name, state_name = full_name.split(', ')
+    full_name=county_metadata['NAME']
+    county_name, state_name=full_name.split(', ')
 else:
-    county_name = state_name = selected_county_fips = None
+    county_name=state_name=selected_county_fips=None
 
 if selected_county_fips:
     # 6. Show current population and projected populations of the county
@@ -572,8 +570,9 @@ if selected_county_fips:
     st.markdown(
         f"The following indicators show how {county_name} may be affected by projected population changes:")
 
-    display_education_indicators(county_name, state_name, selected_county_fips, db_conn)
-    
+    display_education_indicators(
+        county_name, state_name, selected_county_fips, db_conn)
+
     split_row(
         lambda: display_unemployment_indicators(
             county_name, state_name, selected_county_fips, db_conn),

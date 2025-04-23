@@ -23,8 +23,8 @@ def split_row(left_component, right_component, ratio: List[int]):
     col1, col2 = st.columns(ratio)
     
     with col1:
-        left_component()
+        if left_component: left_component()
     with col2:
-        right_component()
+        if right_component: right_component()
         
     

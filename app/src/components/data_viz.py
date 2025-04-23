@@ -196,7 +196,7 @@ def migration_map(scenario, conn: Connection):
 
         # Optionally, you can update the legend title
         fig.update_layout(
-            # font_size=30,
+            height=800,
             title=dict(
                 text="County Population Gain w/ FEMA National Risk Index",
                 automargin=True,
