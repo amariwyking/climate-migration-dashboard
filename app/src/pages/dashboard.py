@@ -463,15 +463,13 @@ population_projections = db.get_population_projections_by_fips(
 
 selected_county_fips = '36029'
 
-# temp = counties.NAME[counties.COUNTY_FIPS == selected_county_fips].iloc[0]
-
 with st.sidebar:
     selected_county_fips = st.selectbox(
         'Select a county',
         counties.index,
         format_func=lambda fips: counties['NAME'].loc[fips],
         placeholder='Type to search...',
-        index=269
+        index=counties.index.get_loc(selected_county_fips)
     )
 
     impact_map = {
