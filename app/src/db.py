@@ -249,18 +249,24 @@ def get_county_metadata(conn, county_fips=None):
         DataFrame containing county metadata
     """
     try:
-        query = f"SELECT * FROM {Table.COUNTY_METADATA.value}"
+        query = f"SELECT * FROM {Table.COUNTY_CBSA_DATA.value}"
+        params = {}
 
         # Add COUNTY_FIPS filter if provided
         if county_fips is not None:
             if isinstance(county_fips, list):
                 fips_list = ", ".join(str(fips) for fips in county_fips)
-                query += f" WHERE \"COUNTY_FIPS\" IN ({fips_list})"
+                query += " WHERE \"COUNTY_FIPS\" IN :county_fips"
+                params['county_fips'] = fips_list
             else:
-                query += f" WHERE \"COUNTY_FIPS\" = {county_fips}"
+                query += " WHERE \"COUNTY_FIPS\" = :county_fips"
+                params['county_fips'] = county_fips
+
+        # Convert to SQLAlchemy text object
+        sql_query = text(query)
 
         # Execute query and return as DataFrame
-        df = pd.read_sql(query, conn).set_index("COUNTY_FIPS")
+        df = pd.read_sql(sql_query, conn, params=params)
 
         return df
     except Exception as e:
@@ -304,5 +310,5 @@ def get_cbsa_counties(conn, filter: str = None):
 
         return df
     except Exception as e:
-        st.error(f"Error loading county data counts: {str(e)}")
+        st.error(f"Error loading county CBSA data: {str(e)}")
         st.stop()

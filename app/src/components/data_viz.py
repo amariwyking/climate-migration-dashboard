@@ -123,7 +123,7 @@ def migration_map(data, conn: Connection):
             on='COUNTY_FIPS'
         )
 
-        counties_data['GEOMETRY'] = counties_data['GEOMETRY'].apply(wkt.loads)
+        counties_data['geometry'] = counties_data['geometry'].apply(wkt.loads)
 
         fig = px.choropleth(
             counties_data, 

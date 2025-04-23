@@ -17,7 +17,7 @@ from src.components import (
 def display_population_projections(county_name, state_name, county_fips, population_historical, population_projections):
     st.write(f"### Population Projections for {county_name}, {state_name}")
 
-    county_pop_historical = population_historical[population_historical['COUNTY_FIPS'] == county_fips]
+    county_pop_historical = population_historical.loc[county_fips]
 
     # If the county has multiple rows of data, select the row with the most complete data
     if county_pop_historical.shape[0] > 1:
@@ -29,7 +29,7 @@ def display_population_projections(county_name, state_name, county_fips, populat
 
         county_pop_historical = county_pop_historical.loc[min_missing_idx]
 
-    county_pop_projections = population_projections[population_projections['COUNTY_FIPS'] == county_fips]
+    county_pop_projections = population_projections.loc[county_fips]
 
     # TODO: Rewrite to work with any number of scenarios that are included in the projections
     scenarios = [
@@ -52,7 +52,7 @@ def display_population_projections(county_name, state_name, county_fips, populat
     # Add each projection scenario to the dictionary
     for scenario, label in zip(scenarios, scenario_labels):
         # Get the projected 2065 population for this scenario
-        projected_pop_2065 = county_pop_projections[scenario].iloc[0]
+        projected_pop_2065 = county_pop_projections[scenario]
 
         # Create a copy of the historical data for this scenario
         scenario_data = county_pop_historical.copy()
@@ -64,6 +64,7 @@ def display_population_projections(county_name, state_name, county_fips, populat
         projections_dict[label] = scenario_data
 
         # Convert the dictionary to a DataFrame with scenarios as the index
+
     projection_df = pd.DataFrame(projections_dict)
 
     # Drop the COUNTY_FIPS column which would otherwise be included as a datapoint on the x-axis
@@ -74,29 +75,17 @@ def display_population_projections(county_name, state_name, county_fips, populat
     # Create the chart
     st.line_chart(projection_df)
 
-    display_migration_impact_analysis(projections_dict)
 
-
-def display_migration_impact_analysis(projections_dict):
+def display_migration_impact_analysis(projections_dict, scenario):
     impact_map = {
         "Scenario S5b": "Low",
         "Scenario S5a": "Medium",
         "Scenario S5c": "High"
     }
 
-    # Add scenario selection dropdown
-    st.write("### Impact Analysis")
-    selected_scenario = st.selectbox(
-        "Select a climate migration scenario:",
-        # Exclude Scenario S3 (baseline)
-        options=list(projections_dict.keys())[1:],
-        format_func=lambda sel: impact_map.get(sel),
-        index=0
-    )
-
     # Calculate metrics based on selected scenario vs baseline
-    baseline_pop_2065 = projections_dict["Scenario S3"]["2065"]
-    selected_pop_2065 = projections_dict[selected_scenario]["2065"]
+    baseline_pop_2065 = projections_dict["POPULATION_2065_S3"]
+    selected_pop_2065 = projections_dict[scenario]
 
     # Calculate additional residents (difference between selected scenario and baseline)
     additional_residents = int(selected_pop_2065 - baseline_pop_2065)
@@ -107,33 +96,20 @@ def display_migration_impact_analysis(projections_dict):
 
     # Determine impact level based on selected scenario
 
-    impact_level = impact_map.get(selected_scenario, "Unknown Impact")
-
-    # Create columns for metrics display
-    col1, col2, col3 = st.columns(3)
-
-    # Display metrics in columns
-    with col2:
-        st.metric(
+    # Display metrics in same row
+    split_row(
+        lambda: st.metric(
+            label="Population Increase",
+            value=f"{percent_increase}%",
+        ),
+        lambda: st.metric(
             label="Estimated Population by 2065",
             value=f"{selected_pop_2065:,}",
             delta=None if additional_residents == 0 else (
                 f"{additional_residents:,.0f}" if additional_residents > 0 else f"{additional_residents:,.0f}")
-        )
-
-    with col3:
-        st.metric(
-            label="Population Increase",
-            value=f"{percent_increase}%",
-        )
-
-    with col1:
-        st.metric(label="Climate Impact Scenario", value=impact_level)
-
-    # Main headline below metrics
-    # st.markdown(f"""
-    # ### Climate change is expected to significantly impact {county_name}'s population by 2065
-    # """)
+        ),
+        [3, 7]
+    )
 
 
 def display_housing_indicators(county_name, state_name, county_fips, db_conn):
@@ -476,29 +452,32 @@ st.title('Is America Ready to Move?')
 # Get the database connection
 db_conn = db.get_db_connection()
 
-counties = db.get_county_metadata(db_conn)
+counties = db.get_county_metadata(db_conn).set_index('COUNTY_FIPS')
 
 population_historical = db.get_population_timeseries(
     db_conn, None
-)
+).set_index('COUNTY_FIPS')
 
 population_projections = db.get_population_projections_by_fips(
-    db_conn, None)
+    db_conn, None).set_index('COUNTY_FIPS')
 
-default_county_fips = '36029'
+selected_county_fips = '36029'
+
+# temp = counties.NAME[counties.COUNTY_FIPS == selected_county_fips].iloc[0]
 
 with st.sidebar:
-    county = st.selectbox(
+    selected_county_fips = st.selectbox(
         'Select a county',
-        counties.NAME,
+        counties.index,
+        format_func=lambda fips: counties['NAME'].loc[fips],
         placeholder='Type to search...',
-        index=counties.index.get_loc(default_county_fips)
+        index=269
     )
 
     impact_map = {
-        "POPULATION_2065_S3": "Baseline",
-        "POPULATION_2065_S5b": "Low",
-        "POPULATION_2065_S5a": "Medium",
+        # "POPULATION_2065_S3": "Baseline",
+        "POPULATION_2065_S5a": "Low",
+        "POPULATION_2065_S5b": "Medium",
         "POPULATION_2065_S5c": "High"
     }
 
@@ -508,6 +487,11 @@ with st.sidebar:
         options=list(impact_map.keys()),
         format_func=lambda sel: impact_map.get(sel),
         index=0
+    )
+
+    display_migration_impact_analysis(
+        population_projections.loc[selected_county_fips],
+        selected_scenario
     )
 
 # Short paragraph explaining why climate migration will occur and how
@@ -548,22 +532,21 @@ st.markdown(
     "Select a county to see how it may be impacted by climate-induced migration:")
 
 # Get the County FIPS code, which will be used for all future queries
-if county:
+if selected_county_fips:
+    county_metadata = db.get_county_metadata(
+        db_conn, selected_county_fips).iloc[0]
     # Separate the county and state names
-    county_name, state_name = county.split(', ')
-
-    # Ensure that the final form of the FIPS code is 5 digits
-    county_fips = counties[counties.NAME == county].index[0]
-    county_fips = str(county_fips).zfill(5)
+    full_name = county_metadata['NAME']
+    county_name, state_name = full_name.split(', ')
 else:
-    county_name = state_name = county_fips = None
+    county_name = state_name = selected_county_fips = None
 
-if county_fips:
+if selected_county_fips:
     st.markdown("### Climate Risk Profile")
 
     split_row(
-        lambda: national_risk_score(db_conn, county_fips),
-        lambda: climate_hazards(county_fips, county_name),
+        lambda: national_risk_score(db_conn, selected_county_fips),
+        lambda: climate_hazards(selected_county_fips, county_name),
         [0.4, 0.6])
 
     vertical_spacer(10)
@@ -592,18 +575,19 @@ if county_fips:
 
     if not population_projections.empty:
         display_population_projections(
-            county_name, state_name, county_fips, population_historical, population_projections)
+            county_name, state_name, selected_county_fips, population_historical, population_projections)
 
     # 7. Show socioeconomic indicator analyses
     st.markdown("### Socioeconomic Indicators Analysis")
     st.markdown(
         f"The following indicators show how {county_name} may be affected by projected population changes:")
 
-    display_education_indicators(county_name, state_name, county_fips, db_conn)
+    display_education_indicators(
+        county_name, state_name, selected_county_fips, db_conn)
     split_row(
         lambda: display_unemployment_indicators(
-            county_name, state_name, county_fips, db_conn),
+            county_name, state_name, selected_county_fips, db_conn),
         lambda: display_unemployment_by_education(
-            county_name, state_name, county_fips, db_conn),
+            county_name, state_name, selected_county_fips, db_conn),
         [0.5, 0.5]
     )
