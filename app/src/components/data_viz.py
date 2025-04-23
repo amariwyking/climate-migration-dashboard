@@ -47,7 +47,7 @@ def national_risk_score(conn: Connection, county_fips):
     nri_score = fema_df["FEMA_NRI"].iloc[0]
 
     # Use light gray for the gauge bar
-    bar_color = "rgba(100, 100, 100, 0.8)"
+    bar_color = "rgba(255, 255, 255, 0.5)"
 
     # Display the NRI score with a gauge chart
     fig = go.Figure(go.Indicator(
@@ -70,6 +70,21 @@ def national_risk_score(conn: Connection, county_fips):
             ]
         }
     ))
+
+    fig.update_layout(
+        # width=480,
+        height=240,
+        margin=dict(
+            b=0,
+            t=40,
+            l=80,
+            r=80,
+        ),
+        autosize=True,
+        xaxis=dict(
+            domain=[0, 0.95]
+        )
+    )
 
     st.plotly_chart(fig)
 
@@ -185,7 +200,6 @@ def migration_map(scenario, conn: Connection):
             title=dict(
                 text="County Population Gain w/ FEMA National Risk Index",
                 automargin=True,
-                x=0.5,  # Center the title (0 = left, 1 = right)
                 y=0.95  # Adjust vertical position
             ),
             legend=dict(
@@ -195,12 +209,13 @@ def migration_map(scenario, conn: Connection):
                 tracegroupgap=20,  # Add space between legend groups
             ),
             margin=dict(t=100, b=50, l=50, r=50),
+            autosize=True,
         )
 
         fig.update_layout(
             legend=dict(
                 yanchor="top",
-                y=0.8,
+                y=0.9,
                 xanchor="left",
                 x=1.01,
                 orientation="v"

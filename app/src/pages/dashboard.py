@@ -108,7 +108,7 @@ def display_migration_impact_analysis(projections_dict, scenario):
             delta=None if additional_residents == 0 else (
                 f"{additional_residents:,.0f}" if additional_residents > 0 else f"{additional_residents:,.0f}")
         ),
-        [3, 7]
+        [0.5, 0.5]
     )
 
 
@@ -493,6 +493,8 @@ with st.sidebar:
         population_projections.loc[selected_county_fips],
         selected_scenario
     )
+    
+    national_risk_score(db_conn, selected_county_fips)
 
 # Short paragraph explaining why climate migration will occur and how
 st.markdown("""
@@ -541,15 +543,6 @@ else:
     county_name = state_name = selected_county_fips = None
 
 if selected_county_fips:
-    st.markdown("### Climate Risk Profile")
-    
-    split_row(
-        lambda: national_risk_score(db_conn, selected_county_fips),
-        lambda: climate_hazards(selected_county_fips, county_name),
-        [0.4, 0.6])
-
-    vertical_spacer(10)
-
     # 6. Show current population and projected populations of the county
     st.markdown("""
         ### Understanding Population Projections
