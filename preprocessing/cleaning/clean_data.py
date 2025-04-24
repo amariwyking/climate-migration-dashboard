@@ -352,9 +352,8 @@ class DataCleaner:
         school_data = school_data[columns_to_keep]
         
         # Convert numeric columns
-        school_data['Students'] = pd.to_numeric(school_data['Students'], errors='coerce')
-        school_data['Teachers'] = pd.to_numeric(school_data['Teachers'], errors='coerce')
-        school_data = school_data.dropna(subset=['Students', 'Teachers'])
+        school_data['Students'] = pd.to_numeric(school_data['Students'], errors='coerce').fillna(0)
+        school_data['Teachers'] = pd.to_numeric(school_data['Teachers'], errors='coerce').fillna(0)
         
         # Map state codes to FIPS
         school_data['State'] = school_data['State'].map(state_to_fips)
