@@ -173,7 +173,7 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
 
     # Combine all dataframes into one
     final_df = pd.DataFrame()
-    final_df["Year"] = less_than_hs_df.index
+    final_df["YEAR"] = less_than_hs_df.index
     final_df["LESS_THAN_HIGH_SCHOOL_TOTAL"] = less_than_hs_df.values
     final_df["HIGH_SCHOOL_GRADUATE_TOTAL"] = hs_graduate_df.values
     final_df["SOME_COLLEGE_TOTAL"] = some_college_df.values
@@ -201,28 +201,28 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
 
     # Add traces for educational attainment percentages (left y-axis)
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["LessThanHighSchool_Perc"],
+        go.Scatter(x=final_df["YEAR"], y=final_df["LessThanHighSchool_Perc"],
                    mode="lines+markers", name="Less than High School (%)",
                    marker=dict(symbol="circle")),
         secondary_y=False
     )
 
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["HighSchoolGraduate_Perc"],
+        go.Scatter(x=final_df["YEAR"], y=final_df["HighSchoolGraduate_Perc"],
                    mode="lines+markers", name="High School Graduate (%)",
                    marker=dict(symbol="square")),
         secondary_y=False
     )
 
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["SomeCollege_Perc"],
+        go.Scatter(x=final_df["YEAR"], y=final_df["SomeCollege_Perc"],
                    mode="lines+markers", name="Some College or Associate's Degree (%)",
                    marker=dict(symbol="triangle-up")),
         secondary_y=False
     )
 
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["BachelorsOrHigher_Perc"],
+        go.Scatter(x=final_df["YEAR"], y=final_df["BachelorsOrHigher_Perc"],
                    mode="lines+markers", name="Bachelor's Degree or Higher (%)",
                    marker=dict(symbol="diamond")),
         secondary_y=False
@@ -230,7 +230,7 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
 
     # Add trace for total population (right y-axis)
     fig.add_trace(
-        go.Scatter(x=final_df["Year"], y=final_df["TOTAL_POPULATION_25_64"],
+        go.Scatter(x=final_df["YEAR"], y=final_df["TOTAL_POPULATION_25_64"],
                    mode="lines+markers", name="Total Population (25-64)",
                    line=dict(dash="dash", color="black"),
                    marker=dict(symbol="star", color="black")),
@@ -238,7 +238,7 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
     )
 
     # Set axis titles
-    fig.update_xaxes(title_text="Year")
+    fig.update_xaxes(title_text="YEAR")
     fig.update_yaxes(
         title_text="Percentage of Population (25-64)", secondary_y=False)
     fig.update_yaxes(title_text="Total Population (25-64)", secondary_y=True)
@@ -276,7 +276,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
     # Combine all dataframes into one
     total_unemployment = pd.DataFrame()
-    total_unemployment["Year"] = total_labor_force_df.index
+    total_unemployment["YEAR"] = total_labor_force_df.index
     total_unemployment["TotalLaborForce"] = total_labor_force_df.values
     total_unemployment["TotalUnemployed"] = unemployed_persons_df.values
     total_unemployment["UnemploymentRate"] = unemployment_rate_df.values
@@ -290,7 +290,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
     # Add trace for Total Labor Force (left y-axis)
     fig.add_trace(
-        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["TotalLaborForce"],
+        go.Scatter(x=total_unemployment["YEAR"], y=total_unemployment["TotalLaborForce"],
                    mode="lines+markers", name="Total Labor Force",
                    line=dict(color="blue"),
                    marker=dict(symbol="circle", color="blue")),
@@ -299,7 +299,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
     # Add trace for Total Unemployed (left y-axis)
     fig.add_trace(
-        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["TotalUnemployed"],
+        go.Scatter(x=total_unemployment["YEAR"], y=total_unemployment["TotalUnemployed"],
                    mode="lines+markers", name="Total Unemployed",
                    line=dict(color="red"),
                    marker=dict(symbol="square", color="red")),
@@ -308,7 +308,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
     # Add trace for Unemployment Rate (right y-axis)
     fig.add_trace(
-        go.Scatter(x=total_unemployment["Year"], y=total_unemployment["UnemploymentRate"],
+        go.Scatter(x=total_unemployment["YEAR"], y=total_unemployment["UnemploymentRate"],
                    mode="lines+markers", name="Unemployment Rate (%)",
                    line=dict(dash="dash", color="green"),
                    marker=dict(symbol="triangle-up", color="green")),
@@ -316,7 +316,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
     )
 
     # Set axis titles
-    fig.update_xaxes(title_text="Year")
+    fig.update_xaxes(title_text="YEAR")
     fig.update_yaxes(title_text="Number of People", secondary_y=False)
     fig.update_yaxes(title_text="Unemployment Rate (%)",
                      secondary_y=True, color="green")
@@ -366,7 +366,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
 
     # Combine all dataframes into one
     unemployment_by_edulevel = pd.DataFrame()
-    unemployment_by_edulevel["Year"] = less_than_hs_unemployed_df.index
+    unemployment_by_edulevel["YEAR"] = less_than_hs_unemployed_df.index
 
     # Store raw counts
     unemployment_by_edulevel["LessThanHighSchool_Unemployed"] = less_than_hs_unemployed_df.values
@@ -409,7 +409,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
 
     # Add traces for each education level's unemployment rate
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"],
+        go.Scatter(x=unemployment_by_edulevel["YEAR"],
                    y=unemployment_by_edulevel["LessThanHighSchool_UnemploymentRate"],
                    mode="lines+markers",
                    name="Less Than High School",
@@ -417,7 +417,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
     )
 
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"],
+        go.Scatter(x=unemployment_by_edulevel["YEAR"],
                    y=unemployment_by_edulevel["HighSchoolGraduate_UnemploymentRate"],
                    mode="lines+markers",
                    name="High School Graduate",
@@ -425,7 +425,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
     )
 
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"],
+        go.Scatter(x=unemployment_by_edulevel["YEAR"],
                    y=unemployment_by_edulevel["SomeCollege_UnemploymentRate"],
                    mode="lines+markers",
                    name="Some College or Associate's Degree",
@@ -433,7 +433,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
     )
 
     fig.add_trace(
-        go.Scatter(x=unemployment_by_edulevel["Year"],
+        go.Scatter(x=unemployment_by_edulevel["YEAR"],
                    y=unemployment_by_edulevel["BachelorsOrHigher_UnemploymentRate"],
                    mode="lines+markers",
                    name="Bachelor's Degree or Higher",
@@ -441,7 +441,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
     )
 
     # Set axis titles and layout
-    fig.update_xaxes(title_text="Year")
+    fig.update_xaxes(title_text="YEAR")
     fig.update_yaxes(title_text="Unemployment Rate (%)")
 
     fig.update_layout(

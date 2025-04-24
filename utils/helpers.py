@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # Load environment-specific .env file
 ENVIRONMENT = os.getenv(
-    "ENVIRONMENT", "dev"
+    "ENVIRONMENT", "prod"
 )  # Default to dev, change to prod when deploying
 env_file = f".env.{ENVIRONMENT}" if ENVIRONMENT != "dev" else ".env"
 load_dotenv(env_file)
