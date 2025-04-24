@@ -187,7 +187,7 @@ def get_county_timeseries_data(conn, table: Table, indicator_name, county_fips):
 
     try:
         # Create base query
-        query = f'SELECT "{table_name}"."Year", "{indicator_name}" FROM "{table_name}"'
+        query = f'SELECT "{table_name}"."YEAR", "{indicator_name}" FROM "{table_name}"'
 
         # Initialize parameters dictionary
         params = {}
@@ -205,7 +205,7 @@ def get_county_timeseries_data(conn, table: Table, indicator_name, county_fips):
                 params['county_fips'] = str(county_fips)
 
         # Sort the results of the query
-        query += f" ORDER BY \"{table_name}\".\"Year\" ASC"
+        query += f" ORDER BY \"{table_name}\".\"YEAR\" ASC"
 
         # Convert to SQLAlchemy text object
         sql_query = text(query)
@@ -213,8 +213,8 @@ def get_county_timeseries_data(conn, table: Table, indicator_name, county_fips):
         # Execute query and return as DataFrame
         df = pd.read_sql(sql_query, conn, params=params)
 
-        df.Year = pd.to_datetime(df.Year, format='%Y').dt.year
-        df = df.set_index("Year")
+        df.YEAR = pd.to_datetime(df.YEAR, format='%Y').dt.year
+        df = df.set_index("YEAR")
 
         return df
     except Exception as e:
