@@ -2,6 +2,8 @@ import json
 from sqlalchemy import Connection
 import streamlit as st
 import pandas as pd
+import geopandas as gpd
+from shapely.ops import unary_union
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
@@ -170,6 +172,20 @@ def migration_map(scenario, conn: Connection):
             include_lowest=True
         )
 
+        counties_data = gpd.GeoDataFrame(counties_data)
+
+        climate_regions_gdf = counties_data.dissolve(by='CLIMATE_REGION', )
+
+        # Clean up the geometries to remove internal boundaries
+        for idx, row in climate_regions_gdf.iterrows():
+            # If the geometry is a MultiPolygon, convert it to a single Polygon
+            if row.geometry.geom_type == 'MultiPolygon':
+                # Use unary_union to merge all the polygons and remove internal boundaries
+                cleaned_geom = unary_union(row.geometry)
+                climate_regions_gdf.at[idx, 'geometry'] = cleaned_geom
+
+        climate_regions_geojson = climate_regions_gdf.__geo_interface__
+
         msa_counties = db.get_cbsa_counties(conn, 'metro')
 
         msa_data = counties_data[counties_data['COUNTY_FIPS'].isin(
@@ -184,9 +200,14 @@ def migration_map(scenario, conn: Connection):
         fig = px.choropleth(
             counties_data,
             geojson=counties,
-            color='CLIMATE_REGION',
+            color='NRI_BUCKET',
             color_discrete_sequence=[
-                '#8b8d6f', '#576b80', '#534e58', '#3c232e', '#c09172'],
+                RISK_COLORS_RGBA[3],
+                RISK_COLORS_RGBA[4],
+                RISK_COLORS_RGBA[2],
+                RISK_COLORS_RGBA[1],
+                RISK_COLORS_RGBA[0],
+            ],
             locations='COUNTY_FIPS',
             scope="usa",
             labels={scenario: 'Population'},
@@ -194,7 +215,28 @@ def migration_map(scenario, conn: Connection):
             hover_data=None,
         )
 
-        # Optionally, you can update the legend title
+        fig.add_trace(
+            go.Choropleth(
+                geojson=climate_regions_geojson,
+                locations=climate_regions_gdf.index,  # Using the region names as locations
+                z=[1] * len(climate_regions_gdf),  # Dummy values for coloring
+                colorscale=[[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']],
+                marker_line_color='white',  # Border color for regions
+                marker_line_width=5,        # Thicker border for visibility
+                showscale=False,            # Hide the colorbar for this layer
+                name="Climate Regions",
+                showlegend=False,
+            )
+        )
+
+        # Configure the map layout
+        fig.update_geos(
+            visible=False,
+            scope="usa",
+            showcoastlines=True,
+            projection_type="albers usa"
+        )
+
         fig.update_layout(
             height=800,
             title=dict(
@@ -207,94 +249,14 @@ def migration_map(scenario, conn: Connection):
                 itemsizing="constant",
                 groupclick="toggleitem",
                 tracegroupgap=20,  # Add space between legend groups
-            ),
-            margin=dict(t=100, b=50, l=50, r=50),
-            autosize=True,
-        )
-
-        fig.update_layout(
-            legend=dict(
                 yanchor="top",
                 y=0.9,
                 xanchor="left",
                 x=1.01,
                 orientation="v"
-            )
-        )
-
-        # Create the scatter_geo trace
-        scatter_fig = px.scatter_geo(
-            msa_data,
-            lat='CENTROID_LAT',
-            lon='CENTROID_LON',
-            size='NORMALIZED_POP',
-            size_max=70,
-            color='NRI_BUCKET',
-            color_discrete_sequence=[
-                '#ADD8E6', '#90EE90', '#FFA500', '#FF69B4', '#D1001B'],
-            custom_data=['COUNTY_FIPS', scenario,
-                         'POPULATION_2065_S5b', 'VARIATION', 'VARIATION_PCT'],
-            category_orders={'NRI_BUCKET': [
-                'Very Low', 'Low', 'Moderate', 'High', 'Very High']}  # Ensure consistent order
-        )
-
-        # Add all traces from the scatter figure to the main figure
-        for scatter_trace in scatter_fig.data:
-            # Update the hover template for each trace
-            scatter_trace.hovertemplate = (
-                "FIPS: %{customdata[0]}<br>" +
-                f"{scenario}: %{{customdata[1]}}<br>" +
-                "Scenario 1: %{customdata[2]}<br>" +
-                "Difference: %{customdata[3]:.2f}<br>" +
-                "% Change: %{customdata[4]:.2f}%<br>" +
-                "<extra></extra>"
-            )
-
-            # Add the trace to your existing figure
-            fig.add_trace(scatter_trace)
-
-        fig.update_geos(
-            fitbounds="locations",
-            bgcolor='rgba(0,0,0,0)',     # Transparent background
-            projection_type='albers usa',  # Keep USA projection for proper focus
-            projection_scale=0.5,
-            scope="usa",
-        )
-
-        # Make county boundaries visible but subtle
-        fig.update_traces(
-            marker_line_width=0,
-            selector=dict(type='choropleth')
-        )
-
-        fig.for_each_trace(
-            lambda trace: trace.update(legendgroup=None, showlegend=True)
-        )
-
-        fig.for_each_trace(
-            lambda trace: trace.update(
-                legendgroup="climate_regions",
-                legendgrouptitle=dict(
-                    text="Climate Regions",
-                ),
-                showlegend=True
-            ) if trace.type == 'choropleth' else None
-        )
-
-        # Update the scatter traces to use a different legend group
-        fig.for_each_trace(
-            lambda trace: trace.update(
-                legendgroup="risk_levels",
-                legendgrouptitle=dict(
-                    text="FEMA National Risk Index",
-                ),
-                showlegend=True,
-                marker=dict(
-                    size=trace.marker.size,  # Keep existing size
-                    color=trace.marker.color,  # Keep existing color
-                    line=dict(width=0, color='black'),
-                )
-            ) if trace.type == 'scattergeo' else None
+            ),
+            margin=dict(t=100, b=50, l=50, r=50),
+            autosize=True,
         )
 
         # fig.write_image('/Users/amarigarrett/Developer/climate-migration-dashboard/plot.png',
