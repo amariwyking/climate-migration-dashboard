@@ -10,10 +10,411 @@ from src.components import (
     vertical_spacer,
     split_row,
     fema_nri_map,
+    population_by_climate_region,
     national_risk_score,
     climate_hazards,
+    socioeconomic_projections,
+    plot_socioeconomic_indices,
+    plot_socioeconomic_radar,
 )
 
+def display_scenario_impact_analysis(county_name, state_name, projected_data):
+    """
+    Display comprehensive impact analysis based on projected data
+    """
+    st.header(f"Migration Impact Analysis")
+    
+    # Add explanation of the scenarios
+    with st.expander("About the Scenarios", expanded=False):
+        st.markdown("""
+        ### Understanding the Scenarios
+        """)
+        
+        # 6. Show current population and projected populations of the county
+        st.markdown("""
+            The population projections shown in this dashboard represent different scenarios for how climate change might affect migration patterns and population distribution across U.S. regions by 2065.
+
+            #### What These Scenarios Mean:
+
+        """)
+
+        feature_cards([
+            {"title": "No Impact",
+                "description": "The projection model only considers labor and housing feedback mechanisms"},
+            {"title": "Low Impact",
+                "description": "Model includes modest climate-influenced migration (50% of projected effect)"},
+            {"title": "Medium Impact",
+                "description": "The expected influence of climate migration on migration decisions (100% of projected effect)"},
+            {"title": "High Impact",
+                "description": "Illustrates an intensified scenario where climate factors are more severe (200% of projected effect)"},
+        ])
+    
+    # Create tabs for different impact categories
+    tab1, tab2, tab3 = st.tabs(["Employment", "Education", "Housing"])
+    
+    with tab1:
+        st.subheader("Employment Impact")
+        st.markdown("""
+        This chart shows how different migration scenarios could affect employment rates in your community. 
+        The 4% unemployment line represents the Non-Accelerating Inflation Rate of Unemployment (NAIRU), 
+        generally considered to be a healthy level of unemployment in a stable economy.
+        """)
+        
+        # Display employment chart
+        employment_chart = create_employment_chart(projected_data)
+        st.plotly_chart(employment_chart, use_container_width=True)
+        
+        # Add interpretation based on the data
+        unemployment_above_threshold = any(100 - row['TOTAL_EMPLOYED_PERCENTAGE'] > 4.0 for _, row in projected_data.iterrows())
+        
+        if unemployment_above_threshold:
+            st.warning(":material/warning: Under some scenarios, unemployment may rise above the 4% NAIRU threshold, which could indicate economic stress.")
+        else:
+            st.success(":material/check_circle_outline: Employment levels remain healthy across all scenarios, suggesting economic resilience.")
+    
+    with tab2:
+        st.subheader("Education Impact")
+        st.markdown("""
+        This chart displays the projected student-teacher ratios under different scenarios. 
+        The national average is approximately 16:1, with higher ratios potentially indicating 
+        strained educational resources.
+        """)
+        
+        # Display education chart
+        education_chart = create_student_teacher_chart(projected_data)
+        st.plotly_chart(education_chart, use_container_width=True)
+        
+        # Add interpretation based on the data
+        high_ratio_scenarios = [row['SCENARIO'] for _, row in projected_data.iterrows() if row['STUDENT_TEACHER_RATIO'] > 16.0]
+        
+        if high_ratio_scenarios:
+            st.warning(f"⚠️ The student-teacher ratio exceeds the recommended level in {', '.join(high_ratio_scenarios)}. This may require additional educational resources or staff.")
+        else:
+            st.success(":material/check_circle_outline: Educational resources appear adequate across all scenarios.")
+    
+    with tab3:
+        st.subheader("Housing Impact")
+        st.markdown("""
+        This visualization shows housing availability across scenarios. A healthy housing market typically 
+        maintains a vacancy rate between 5-8% (occupancy rate of 92-95%). Rates outside this range may 
+        indicate housing shortages or excess vacancy.
+        """)
+        
+        # Display housing chart
+        housing_chart = create_housing_chart(projected_data)
+        st.plotly_chart(housing_chart, use_container_width=True)
+        
+        # Calculate and add interpretation
+        for _, row in projected_data.iterrows():
+            occupancy_rate = (row['OCCUPIED_HOUSING_UNITS'] / (row['OCCUPIED_HOUSING_UNITS'] + row['AVAILABLE_HOUSING_UNITS'])) * 100
+            vacancy_rate = 100 - occupancy_rate
+            
+            if vacancy_rate < 5:
+                st.warning(f"In the {row['SCENARIO']} scenario, the vacancy rate is below 5%, indicating a potential housing shortage.")
+            elif vacancy_rate > 8:
+                st.info(f"In the {row['SCENARIO']} scenario, the vacancy rate is above 8%, suggesting potential excess housing capacity.")
+
+def generate_policy_recommendations(projected_data):
+    """Generate policy recommendations based on the projected data"""
+    st.write("# Policy Recommendations")
+    
+    # Calculate metrics for recommendations
+    recommendations = []
+    
+    # Check employment metrics
+    for _, row in projected_data.iterrows():
+        unemployment_rate = 100 - row['TOTAL_EMPLOYED_PERCENTAGE']
+        if unemployment_rate > 4.0 and row['SCENARIO'] in ['S5b', 'S5c']:
+            recommendations.append({
+                'category': 'Employment',
+                'scenario': row['SCENARIO'],
+                'issue': f"Projected unemployment rate of {unemployment_rate:.1f}% exceeds optimal levels",
+                'recommendation': "Consider workforce development programs and economic incentives to attract industries likely to thrive in changing climate conditions."
+            })
+    
+    # Check education metrics
+    for _, row in projected_data.iterrows():
+        if row['STUDENT_TEACHER_RATIO'] > 16.0 and row['SCENARIO'] in ['S5b', 'S5c']:
+            recommendations.append({
+                'category': 'Education',
+                'scenario': row['SCENARIO'],
+                'issue': f"Student-teacher ratio of {row['STUDENT_TEACHER_RATIO']:.1f} exceeds national average",
+                'recommendation': "Plan for educational infrastructure expansion and teacher recruitment to maintain educational quality with population growth."
+            })
+    
+    # Check housing metrics
+    for _, row in projected_data.iterrows():
+        occupancy_rate = (row['OCCUPIED_HOUSING_UNITS'] / (row['OCCUPIED_HOUSING_UNITS'] + row['AVAILABLE_HOUSING_UNITS'])) * 100
+        vacancy_rate = 100 - occupancy_rate
+        
+        if vacancy_rate <= 0 and row['SCENARIO'] in ['S5b', 'S5c']:
+            recommendations.append({
+                'category': 'Housing',
+                'scenario': row['SCENARIO'],
+                'issue': f"Negative vacancy rate of {vacancy_rate:.1f}% indicates a shortage of housing.",
+                'recommendation': "Implement zoning reforms and incentives for affordable housing development to accommodate projected population growth."
+            })
+        elif vacancy_rate < 5 and row['SCENARIO'] in ['S5b', 'S5c']:
+            recommendations.append({
+                'category': 'Housing',
+                'scenario': row['SCENARIO'],
+                'issue': f"Low vacancy rate of {vacancy_rate:.1f}% indicates potential housing shortage",
+                'recommendation': "Implement zoning reforms and incentives for affordable housing development to accommodate projected population growth."
+            })
+        elif vacancy_rate > 8 and row['SCENARIO'] in ['S5b', 'S5c']:
+            recommendations.append({
+                'category': 'Housing',
+                'scenario': row['SCENARIO'],
+                'issue': f"High vacancy rate of {vacancy_rate:.1f}% indicates potential housing surplus",
+                'recommendation': "Consider adaptive reuse strategies for vacant properties and focus on maintaining existing housing stock quality."
+            })
+    
+    # Display recommendations
+    if recommendations:
+        for category in ['Employment', 'Education', 'Housing']:
+            category_recommendations = [r for r in recommendations if r['category'] == category]
+            if category_recommendations:
+                st.write(f"##### {category} Recommendations")
+                for rec in category_recommendations:
+                    with st.expander(f"{rec['issue']} in {rec['scenario']} scenario"):
+                        st.write(rec['recommendation'])
+    else:
+        st.info("Based on current projections, no critical interventions are needed as metrics remain within healthy ranges across scenarios.")
+
+def create_housing_chart(projected_data):
+    # Make a copy of the dataframe to avoid modifying the original
+    df = projected_data.copy()
+    
+    # Sort the dataframe by SCENARIO
+    df = df.sort_values('SCENARIO')
+    
+        # Get the max absolute value for symmetric axis
+    max_value = max(abs(df['AVAILABLE_HOUSING_UNITS'].max()), 
+                    abs(df['AVAILABLE_HOUSING_UNITS'].min()))
+
+    # Calculate housing metrics if not already in the dataframe
+    if 'HOUSING_OCCUPANCY_RATE' not in df.columns:
+        df['HOUSING_OCCUPANCY_RATE'] = (df['OCCUPIED_HOUSING_UNITS'] / (df['OCCUPIED_HOUSING_UNITS'] + df['AVAILABLE_HOUSING_UNITS'])) * 100
+    
+    # Create the horizontal bar chart
+    fig = go.Figure()
+    
+    # Sort the data by AVAILABLE_HOUSING_UNITS for better visualization
+    sorted_data = df.sort_values('AVAILABLE_HOUSING_UNITS')
+
+    fig.add_trace(go.Bar(
+        y=sorted_data['SCENARIO'],
+        x=sorted_data['AVAILABLE_HOUSING_UNITS'],
+        orientation='h',
+        marker=dict(
+            color=sorted_data['AVAILABLE_HOUSING_UNITS'].apply(lambda x: '#E07069' if x < 0 else '#509BC7'),
+            line=dict(color='rgba(0, 0, 0, 0.2)', width=1)
+        )
+    ))
+
+    # Update layout for better appearance
+    fig.update_layout(
+        title="Projected Available Housing Units by Scenario in 2065",
+        xaxis=dict(
+            title="Available Housing Units in 2065",
+            range=[-max_value, max_value],  # Symmetric x-axis
+            zeroline=True,
+            zerolinecolor='black',
+            zerolinewidth=1
+        ),
+        yaxis=dict(
+            title="Scenario",
+            autorange="reversed"  # To have the largest value at the top
+        ),
+        height=500,
+        margin=dict(l=100, r=20, t=70, b=70),
+        template="plotly_white"
+    )
+
+    # Adding a vertical reference line at x=0
+    fig.add_shape(
+        type="line",
+        x0=0, y0=-0.5,
+        x1=0, y1=len(sorted_data) - 0.5,
+        line=dict(color="black", width=1, dash="solid")
+    )
+
+    # Display the chart
+    return fig
+
+def create_student_teacher_chart(projected_data):
+    # Make a copy of the dataframe to avoid modifying the original
+    df = projected_data.copy()
+    
+    # Sort the dataframe by SCENARIO
+    df = df.sort_values('SCENARIO')
+    
+    # Create figure
+    fig = go.Figure()
+    
+    # Define the optimal student-teacher ratio threshold
+    optimal_ratio = 16.0  # National average is around 16:1
+    
+    # Add bar for each scenario
+    fig.add_trace(
+        go.Bar(
+            x=df['SCENARIO'],
+            y=df['STUDENT_TEACHER_RATIO'],
+            marker=dict(
+                color=[
+                    '#E07069' if ratio > optimal_ratio else '#509BC7' 
+                    for ratio in df['STUDENT_TEACHER_RATIO']
+                ]
+            ),
+            text=[f"{ratio:.1f}" for ratio in df['STUDENT_TEACHER_RATIO']],
+            textposition='auto',
+            hovertemplate='Student-Teacher Ratio: %{y:.1f}<extra></extra>'
+        )
+    )
+    
+    # Add threshold line
+    fig.add_shape(
+        type="line",
+        x0=-0.5,
+        y0=optimal_ratio,
+        x1=len(df) - 0.5,
+        y1=optimal_ratio,
+        line=dict(
+            color="gray",
+            width=2,
+            dash="dash",
+        ),
+    )
+    
+    # Add annotation for the threshold
+    fig.add_annotation(
+        x=len(df) - 1,
+        y=optimal_ratio + 0.5,
+        text="Optimal Ratio (16:1)",
+        showarrow=False,
+        font=dict(
+            color="gray"
+        )
+    )
+    
+    # Update layout
+    fig.update_layout(
+        title='Projected Student-Teacher Ratio by Scenario',
+        xaxis=dict(
+            title='Scenario',
+            tickmode='array',
+            tickvals=list(range(len(df))),
+            ticktext=df['SCENARIO']
+        ),
+        yaxis=dict(
+            title='Student-Teacher Ratio',
+            range=[0, max(df['STUDENT_TEACHER_RATIO']) * 1.2]  # Add some padding
+        ),
+        margin=dict(l=50, r=50, t=80, b=50),
+        height=400,
+    )
+    
+    return fig
+
+def format_percentage(percentage):
+    return f"{percentage:.1f}%"
+
+def create_employment_chart(projected_data):
+    # Make a copy of the dataframe to avoid modifying the original
+    df = projected_data.copy()
+    
+    # Calculate the unemployed percentage for each scenario
+    df['UNEMPLOYED_PERCENTAGE'] = 100 - df['TOTAL_EMPLOYED_PERCENTAGE']
+    
+    # Sort the dataframe by SCENARIO
+    df = df.sort_values('SCENARIO')
+    
+    # Define the NAIRU threshold
+    nairu_threshold = 4.0
+    
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    
+    # Add traces for employed and unemployed percentages
+    for index, row in df.iterrows():
+        # Determine color for unemployed percentage bar
+        unemployed_color = '#E07069' if row['UNEMPLOYED_PERCENTAGE'] > nairu_threshold else '#F0D55D'
+        
+        # Add employed percentage bar
+        fig.add_trace(
+            go.Bar(
+                name='Employed',
+                y=[row['SCENARIO']],
+                x=[row['TOTAL_EMPLOYED_PERCENTAGE']],
+                orientation='h',
+                marker=dict(color='#509BC7'),
+                text=[format_percentage(row['TOTAL_EMPLOYED_PERCENTAGE'])],
+                textposition='inside',
+                hoverinfo='text',
+                hovertext=[f"Employed: {format_percentage(row['TOTAL_EMPLOYED_PERCENTAGE'])}"],
+                showlegend=index == 0  # Only show in legend for the first entry
+            )
+        )
+        
+        # Add unemployed percentage bar
+        fig.add_trace(
+            go.Bar(
+                name='Unemployed',
+                y=[row['SCENARIO']],
+                x=[row['UNEMPLOYED_PERCENTAGE']],
+                orientation='h',
+                marker=dict(color=unemployed_color),
+                text=[format_percentage(row['UNEMPLOYED_PERCENTAGE'])],
+                textposition='inside',
+                hoverinfo='text',
+                hovertext=[f"Unemployed: {format_percentage(row['UNEMPLOYED_PERCENTAGE'])}"],
+                showlegend=index == 0  # Only show in legend for the first entry
+            )
+        )
+    
+    # Add NAIRU threshold line
+    fig.add_trace(
+        go.Scatter(
+            name='NAIRU Threshold (4%)',
+            x=[nairu_threshold],
+            y=df['SCENARIO'],
+            mode='lines',
+            line=dict(color='gray', width=2, dash='dash'),
+            opacity=0.8,
+            hoverinfo='text',
+            hovertext=['NAIRU Threshold: 4%'],
+            showlegend=True
+        ),
+        secondary_y=False
+    )
+    
+    # Update layout
+    fig.update_layout(
+        title='Projected Employment by Scenario',
+        barmode='stack',
+        xaxis=dict(
+            title='Percentage (%)',
+            range=[0, 100],
+            tickvals=[0, 20, 40, 60, 80, 100],
+            ticktext=['0%', '20%', '40%', '60%', '80%', '100%']
+        ),
+        yaxis=dict(
+            title='Scenario',
+            categoryorder='array',
+            categoryarray=df['SCENARIO'].tolist()
+        ),
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='right',
+            x=1
+        ),
+        margin=dict(l=50, r=50, t=80, b=50),
+        height=400,
+    )
+    
+    return fig
 
 def feature_cards(items):
     """
@@ -192,14 +593,14 @@ def display_migration_impact_analysis(projections_dict, scenario):
     # Display metrics in same row
     split_row(
         lambda: st.metric(
-            label="Population Increase",
-            value=f"{percent_increase}%",
-        ),
-        lambda: st.metric(
             label="Estimated Population by 2065",
             value=f"{selected_pop_2065:,}",
             delta=None if additional_residents == 0 else (
                 f"{additional_residents:,.0f}" if additional_residents > 0 else f"{additional_residents:,.0f}")
+        ),
+        lambda: st.metric(
+            label="Population Increase",
+            value=f"{percent_increase}%",
         ),
         [0.5, 0.5]
     )
@@ -584,13 +985,15 @@ with st.sidebar:
         population_projections.loc[selected_county_fips],
         selected_scenario
     )
+    
+    vertical_spacer(5)
 
     national_risk_score(selected_county_fips)
 
 
 # Short paragraph explaining why climate migration will occur and how
 st.markdown("""
-### Climate-Induced Migration
+# Climate-Induced Migration
 Climate change is increasingly driving population shifts across the United States. As extreme weather events become more frequent and severe, communities around the country face challenges including sea-level rise, extreme heat, drought, wildfires, and flooding. These environmental pressures are expected to force increasingly more people to relocate from high-risk areas to regions with better climate resilience, impacting local economies, housing markets, and public services.
 """)
 
@@ -633,28 +1036,9 @@ else:
     county_name = state_name = selected_county_fips = None
 
 if selected_county_fips:
-    # 6. Show current population and projected populations of the county
-    st.markdown("""
-        ### Understanding Population Projections
-
-        The population projections shown in this dashboard represent different scenarios for how climate change might affect migration patterns and population distribution across U.S. regions by 2065.
-
-        #### What These Scenarios Mean:
-
-    """)
-
-    st.write("**Climate Migration Scenarios**:")
-
-    feature_cards([
-        {"title": "No Impact",
-            "description": "Only models feedback between labor and housing in migration decisions"},
-        {"title": "Low Impact",
-            "description": "Represents modest climate-influenced migration (50% of projected effect)"},
-        {"title": "Medium Impact",
-            "description": "The expected influence of climate migration on migration decisions (100% of projected effect)"},
-        {"title": "High Impact",
-            "description": "Illustrates an intensified climate migration scenario (200% of projected effect)"},
-    ])
+    
+    
+    population_by_climate_region(selected_scenario)
 
     st.markdown("""
                 These projections help visualize how climate change could reshape population distribution across regions, with some areas experiencing population growth (Northeast, West, California) and others facing decline (South, Midwest) due to climate-related migration pressures.
@@ -662,22 +1046,57 @@ if selected_county_fips:
                 The data is derived from research on climate-induced migration patterns, which considers factors including extreme weather events, economic opportunities, and regional climate vulnerabilities.
                 """)
 
+    # 7. Show socioeconomic indicator analyses
+    # st.markdown("### Socioeconomic Indicator Projections")
+    # st.markdown(
+    #     f"The following indicators show how {county_name} may be affected by projected population changes:")
+
+    # st.write("##### Index projections")
+    # projected_indices_df = database.get_table_for_county(Table.COUNTY_PROJECTED_INDICES, selected_county_fips)
+    # st.write(projected_indices_df)
+    
+    # st.write("##### Socioeconomic indices")
+    # socioeconomic_indices_df = database.get_table_for_county(Table.COUNTY_SOCIOECONOMIC_INDEX_DATA, selected_county_fips)
+    # st.write(socioeconomic_indices_df)
+    
+    # plot_socioeconomic_indices(socioeconomic_indices_df)
+    # plot_socioeconomic_radar(socioeconomic_indices_df)
+    
+    
+    
+    ######################################################################
+    ######################################################################
+    ######################################################################
+    ######################################################################
+    ######################################################################
+    projected_data = database.get_table_for_county(Table.COUNTY_COMBINED_PROJECTIONS, selected_county_fips)
+    # st.write(projected_data)
+    
+    # Display the impact analysis
+    display_scenario_impact_analysis(county_name, state_name, projected_data)
+    
+    # Display policy recommendations
+    generate_policy_recommendations(projected_data)
+    
+
+
+    
     # if not population_projections.empty:
     #     display_population_projections(
     #         county_name, state_name, selected_county_fips, population_historical, population_projections)
 
-    # 7. Show socioeconomic indicator analyses
-    st.markdown("### Socioeconomic Indicators Analysis")
-    st.markdown(
-        f"The following indicators show how {county_name} may be affected by projected population changes:")
 
-    display_education_indicators(
-        county_name, state_name, selected_county_fips)
+    # display_education_indicators(
+        # county_name, state_name, selected_county_fips)
 
-    split_row(
-        lambda: display_unemployment_indicators(
-            county_name, state_name, selected_county_fips),
-        lambda: display_unemployment_by_education(
-            county_name, state_name, selected_county_fips),
-        [0.5, 0.5]
-    )
+    # split_row(
+    #     lambda: display_unemployment_indicators(
+    #         county_name, state_name, selected_county_fips),
+    #     lambda: display_unemployment_by_education(
+    #         county_name, state_name, selected_county_fips),
+    #     [0.5, 0.5]
+    # )
+    ######################################################################
+    ######################################################################
+    ######################################################################
+    ######################################################################

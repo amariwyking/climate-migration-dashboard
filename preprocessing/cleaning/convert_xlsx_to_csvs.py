@@ -205,7 +205,7 @@ def consolidate_public_school_data(input_dir, output_dir):
     output_path = output_dir / f"public_school_data_{year}.csv"
     df_combined.to_csv(output_path, index=False)
     
-    print(f"\n✅ Consolidated public school DataFrame has {len(df_combined)} rows")
+    print(f"\n:material/check_circle_outline: Consolidated public school DataFrame has {len(df_combined)} rows")
     print(f"Saved to {output_path}")
     
     return True
@@ -223,7 +223,7 @@ def main():
         if job_input_dir.exists():
             job_success = process_job_openings(job_input_dir, job_output_dir)
             if job_success:
-                print("✅ Job openings data processing completed successfully")
+                print(":material/check_circle_outline: Job openings data processing completed successfully")
             else:
                 print("⚠️ Job openings data processing completed with warnings")
         else:

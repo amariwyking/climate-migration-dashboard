@@ -21,6 +21,8 @@ class Table(Enum):
     COUNTY_SOCIOECONOMIC_INDEX_DATA = "socioeconomic_indices"
     COUNTY_SOCIOECONOMIC_RANKING_DATA = "socioeconomic_indices_rankings"
     COUNTY_PROJECTED_INDICES = "projected_socioeconomic_indices"
+    
+    COUNTY_COMBINED_PROJECTIONS = "combined_2065_data"
 
     # Population related tables
     POPULATION_HISTORY = "timeseries_population"
