@@ -9,7 +9,7 @@ from src.db import db as database, Table, get_db_connection
 from src.components import (
     vertical_spacer,
     split_row,
-    migration_map,
+    fema_nri_map,
     national_risk_score,
     climate_hazards,
 )
@@ -595,7 +595,7 @@ Climate change is increasingly driving population shifts across the United State
 """)
 
 # Climate migration choropleth of US counties
-migration_map(selected_scenario)
+fema_nri_map(selected_scenario)
 
 st.markdown("""
             ### Climate Vulnerability Isn't the Whole Story
