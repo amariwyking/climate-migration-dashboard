@@ -17,6 +17,7 @@ PATHS = {
         "crime": Path("./data/raw/state_crime_data"),
         "fema_nri": Path("./data/raw/county_fema_nri_data"),
         "cbsa": Path("./data/raw/cbsa_data"),
+        "public_school": Path("./data/raw/public_school_csvs_data"),
     },
 }
 
@@ -50,6 +51,12 @@ COLUMN_MAPPINGS = {
             "B23006_014E": "HIGH_SCHOOL_GRADUATE_UNEMPLOYED",
             "B23006_021E": "SOME_COLLEGE_UNEMPLOYED",
             "B23006_028E": "BACHELORS_OR_HIGHER_UNEMPLOYED",
+            "B01001_004E": "MALE_5-9", 
+            "B01001_005E": "MALE_10-14",
+            "B01001_006E": "MALE_15-17",
+            "B01001_028E": "FEMALE_5-9",
+            "B01001_029E": "FEMALE_10-14",
+            "B01001_030E": "FEMALE_15-17" 
         }
     },
     "housing": {
@@ -92,6 +99,12 @@ COLUMN_MAPPINGS = {
             "FemaNaturalHazardRiskIndex_NaturalHazardImpact": "FEMA_NRI"
         }
     },
+    "public_school": {
+        (2022, 2023): {
+          "Students": "PUBLIC_SCHOOL_STUDENTS",
+          "Teachers": "PUBLIC_SCHOOL_TEACHERS",
+        }
+    },
 }
 
 POPULATION_COLUMN = "B01003_001E"
@@ -116,19 +129,19 @@ class DataCleaner:
         # Identify numeric columns (excluding non-numeric columns)
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
 
-        # Remove Year and COUNTY_FIPS from z-score calculation
+        # Remove YEAR and COUNTY_FIPS from z-score calculation
         z_score_cols = [
             col
             for col in numeric_cols
-            if col not in ["Year", "COUNTY_FIPS", "POPULATION"]
+            if col not in ["YEAR", "COUNTY_FIPS", "POPULATION"]
         ]
 
         # Create a copy of the dataframe to avoid modifying the original
         df_with_z_scores = df.copy()
 
         # Calculate z-scores for each year and each numeric column
-        for year in df["Year"].unique():
-            year_mask = df["Year"] == year
+        for year in df["YEAR"].unique():
+            year_mask = df["YEAR"] == year
 
             for col in z_score_cols:
                 # Create z-score column name
@@ -167,9 +180,9 @@ class DataCleaner:
     def process_population_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
         """Process individual population dataframe."""
         df["COUNTY_FIPS"] = (df["STATE"] + df["COUNTY"]).str.zfill(5)
-        df["Year"] = year
+        df["YEAR"] = year
         df = df.rename(columns={POPULATION_COLUMN: "POPULATION"})
-        return df[["COUNTY_FIPS", "Year", "POPULATION", "STATE", "COUNTY", "NAME"]]
+        return df[["COUNTY_FIPS", "YEAR", "POPULATION", "STATE", "COUNTY", "NAME"]]
 
     @classmethod
     def load_county_population_data(cls) -> Dict[int, pd.DataFrame]:
@@ -210,8 +223,8 @@ class DataCleaner:
             cbsa_df = pd.read_excel(pop_path, dtype={'FIPS State Code': str, 'FIPS County Code': str}, header=2)
             
             cbsa_df["COUNTY_FIPS"] = cbsa_df["FIPS State Code"].str.cat(cbsa_df["FIPS County Code"])
-            cbsa_df["Year"] = 2023
-            cbsa_df = cbsa_df[["COUNTY_FIPS", "CBSA Code", "Metropolitan/Micropolitan Statistical Area", "Year"]]
+            cbsa_df["YEAR"] = 2023
+            cbsa_df = cbsa_df[["COUNTY_FIPS", "CBSA Code", "Metropolitan/Micropolitan Statistical Area", "YEAR"]]
             
             # Filter for metropolitan areas only
             # cbsa_df = cbsa_df[cbsa_df["Metropolitan/Micropolitan Statistical Area"].eq("Metropolitan Statistical Area")]
@@ -277,7 +290,7 @@ class DataCleaner:
                 final_columns = ['COUNTY_FIPS', 'STATE', 'COUNTY', 'NAME', 'POPULATION'] + \
                                 [COLUMN_MAPPINGS["job_openings"][(2010, 2023)][month] for month in months]
                 cleaned_data = county_data[final_columns].dropna(how='all')
-                cleaned_data['Year'] = year
+                cleaned_data['YEAR'] = year
                 
                 all_county_data.append(cleaned_data)
                 
@@ -331,7 +344,7 @@ class DataCleaner:
                 # Select final columns
                 final_columns = ['COUNTY_FIPS', 'STATE', 'COUNTY', 'NAME', 'POPULATION', target_col]
                 cleaned_data = county_data[final_columns].dropna(how='all')
-                cleaned_data['Year'] = year
+                cleaned_data['YEAR'] = year
                 
                 all_county_data.append(cleaned_data)
                 
@@ -343,6 +356,73 @@ class DataCleaner:
         if all_county_data:
             return pd.concat(all_county_data, ignore_index=True)
         return pd.DataFrame()
+    
+    @classmethod
+    def process_public_school_data(cls, data_type: str, year: int = 2023) -> pd.DataFrame:
+        # Load county population data
+        county_with_pop = cls.load_county_population_data()
+        county_with_pop_year = county_with_pop[year].copy()
+        county_with_pop_year['COUNTY NAME'] = county_with_pop_year['NAME'].str.split(',').str[0]
+        
+        # Define constants
+        school_path = PATHS["raw_data"]["public_school"] / f"public_school_data_{year}.csv"
+        columns_to_keep = ['County Name', 'State', 'Students', 'Teachers']
+        state_to_fips = {
+            "AL": "01", "AZ": "04", "AR": "05", "CA": "06",
+            "CO": "08", "CT": "09", "DE": "10", "FL": "12",
+            "GA": "13", "ID": "16", "IL": "17", "IN": "18",
+            "IA": "19", "KS": "20", "KY": "21", "LA": "22", "ME": "23",
+            "MD": "24", "MA": "25", "MI": "26", "MN": "27", "MS": "28",
+            "MO": "29", "MT": "30", "NE": "31", "NV": "32", "NH": "33",
+            "NJ": "34", "NM": "35", "NY": "36", "NC": "37", "ND": "38",
+            "OH": "39", "OK": "40", "OR": "41", "PA": "42", "RI": "44",
+            "SC": "45", "SD": "46", "TN": "47", "TX": "48", "UT": "49",
+            "VT": "50", "VA": "51", "WA": "53", "WV": "54", "WI": "55",
+            "WY": "56"
+        }
+
+        # Read and preprocess school data
+        school_data = pd.read_csv(school_path, dtype={'County Name': str, 'State': str})
+        school_data = school_data[columns_to_keep]
+        
+        # Convert numeric columns
+        school_data['Students'] = pd.to_numeric(school_data['Students'], errors='coerce').fillna(0)
+        school_data['Teachers'] = pd.to_numeric(school_data['Teachers'], errors='coerce').fillna(0)
+        
+        # Map state codes to FIPS
+        school_data['State'] = school_data['State'].map(state_to_fips)
+        
+        # Rename columns according to mapping
+        school_data = school_data.rename(columns=COLUMN_MAPPINGS["public_school"][(2022, 2023)])
+        
+        # Aggregate data by state and county
+        school_data = school_data.groupby(['State', 'County Name']).agg({
+            'PUBLIC_SCHOOL_STUDENTS': 'sum', 
+            'PUBLIC_SCHOOL_TEACHERS': 'sum'
+        }).reset_index()
+        
+        # Round numeric values
+        school_data['PUBLIC_SCHOOL_STUDENTS'] = school_data['PUBLIC_SCHOOL_STUDENTS'].round()
+        school_data['PUBLIC_SCHOOL_TEACHERS'] = school_data['PUBLIC_SCHOOL_TEACHERS'].round()
+        school_data['STUDENT_TEACHER_RATIO'] = school_data['PUBLIC_SCHOOL_STUDENTS'] / school_data['PUBLIC_SCHOOL_TEACHERS']
+        
+        # Merge with population data
+        school_data_with_pop = school_data.merge(
+            county_with_pop_year, 
+            left_on=['State', 'County Name'], 
+            right_on=['STATE', 'COUNTY NAME'], 
+            how='left'
+        )
+        
+        # Clean up columns
+        columns_from_county = ['COUNTY_FIPS', 'STATE', 'COUNTY', 'NAME', 'POPULATION']
+        school_data_with_pop = school_data_with_pop.dropna(subset=columns_from_county, how='all')
+        school_data_with_pop.drop(columns=['County Name', 'State', 'COUNTY NAME'], inplace=True)
+        school_data_with_pop['YEAR'] = year
+        school_data_with_pop = school_data_with_pop.dropna(how='all')
+        
+        return school_data_with_pop
+
 
     @classmethod
     def process_and_save_data(cls, data_type: str):
@@ -359,6 +439,8 @@ class DataCleaner:
             data = cls.process_crime_data()
         elif data_type == "cbsa":
             data = cls.cbsa_data()
+        elif data_type == "public_school":
+            data = cls.process_public_school_data(data_type)
         else:
             print(f"Unknown data type: {data_type}")
             return
@@ -368,7 +450,7 @@ class DataCleaner:
             population_data = cls.load_population_data()
             # Merge datasets
             merged_data = pd.merge(
-                data, population_data, on=["COUNTY_FIPS", "Year"], how="left"
+                data, population_data, on=["COUNTY_FIPS", "YEAR"], how="left"
             )
         else:
             merged_data = data
@@ -377,13 +459,13 @@ class DataCleaner:
         if data_type == "housing":
             # Load economic data to get MEDIAN_INCOME
             economic_data = cls.load_and_process_data("economic")
-            economic_data = economic_data[["COUNTY_FIPS", "Year", "MEDIAN_INCOME"]]
+            economic_data = economic_data[["COUNTY_FIPS", "YEAR", "MEDIAN_INCOME"]]
             
             # Merge housing data with economic data
             merged_data = pd.merge(
                 merged_data, 
                 economic_data, 
-                on=["COUNTY_FIPS", "Year"], 
+                on=["COUNTY_FIPS", "YEAR"], 
                 how="left"
             )
             
@@ -444,12 +526,17 @@ class DataCleaner:
         processed_df["COUNTY_FIPS"] = (
             processed_df["STATE"] + processed_df["COUNTY"]
         ).str.zfill(5)
-        processed_df["Year"] = year
+        processed_df["YEAR"] = year
 
         numeric_cols = list(column_map.values())
         processed_df[numeric_cols] = processed_df[numeric_cols].apply(
             pd.to_numeric, errors="coerce"
         )
+
+        if data_type == "education":
+            processed_df["ELEMENTARY_SCHOOL_POPULATION"] = processed_df["MALE_5-9"] + processed_df["FEMALE_5-9"]  # Ages 5–9
+            processed_df["MIDDLE_SCHOOL_POPULATION"] = processed_df["MALE_10-14"] + processed_df["FEMALE_10-14"]  # Ages 10–14
+            processed_df["HIGH_SCHOOL_POULATION"] = processed_df["MALE_15-17"] + processed_df["FEMALE_15-17"]  # Ages 15–17
 
         # Special processing for economic data
         if data_type == "economic":
@@ -498,10 +585,10 @@ class DataCleaner:
 
 def main():
     # Process all types of data
-    data_types = ["economic", "education", "housing", "job_openings", "crime", "fema_nri"]
+    data_types = ["economic", "education", "housing", "job_openings", "crime", "fema_nri", "cbsa", "public_school"]
 
     # for data_type in data_types:
-    for data_type in ["cbsa"]:
+    for data_type in data_types:
         DataCleaner.process_and_save_data(data_type)
         
     # Process counties data separately by year

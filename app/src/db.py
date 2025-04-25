@@ -199,7 +199,7 @@ def get_stat_var(conn, table: Table, indicator_name, county_fips, year: int = No
         if county_fips is not None:
             if isinstance(county_fips, list):
                 # Create base query
-                query = f'SELECT "Year", "{indicator_name}", "COUNTY_FIPS" FROM "{table_name}"'
+                query = f'SELECT "YEAR", "{indicator_name}", "COUNTY_FIPS" FROM "{table_name}"'
                 
                 # For multiple counties
                 query += " WHERE \"COUNTY_FIPS\" IN :county_fips"
@@ -207,18 +207,18 @@ def get_stat_var(conn, table: Table, indicator_name, county_fips, year: int = No
                     str(fips) for fips in county_fips)
             else:
                 # Create base query
-                query = f'SELECT "Year", "{indicator_name}" FROM "{table_name}"'
+                query = f'SELECT "YEAR", "{indicator_name}" FROM "{table_name}"'
                 
                 # For single county
                 query += " WHERE \"COUNTY_FIPS\" = :county_fips"
                 params['county_fips'] = str(county_fips)
                 
             if year:
-                query += f' AND "Year" = :year'
+                query += f' AND "YEAR" = :year'
                 params['year'] = year
 
         # Sort the results of the query
-        query += f" ORDER BY \"{table_name}\".\"Year\" ASC"
+        query += f" ORDER BY \"{table_name}\".\"YEAR\" ASC"
 
         # Convert to SQLAlchemy text object
         sql_query = text(query)
@@ -226,8 +226,8 @@ def get_stat_var(conn, table: Table, indicator_name, county_fips, year: int = No
         # Execute query and return as DataFrame
         df = pd.read_sql(sql_query, conn, params=params)
 
-        df.Year = pd.to_datetime(df.Year, format='%Y').dt.year
-        df = df.set_index("Year")
+        df.YEAR = pd.to_datetime(df.YEAR, format='%Y').dt.year
+        df = df.set_index("YEAR")
 
         return df
     except Exception as e:
