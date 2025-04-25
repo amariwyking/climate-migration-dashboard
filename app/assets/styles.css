@@ -1,0 +1,7 @@
+/* Styled markdown */
+.custom-title {
+    font-size: 5.5em;
+    margin-top: 2.5em;
+    margin-bottom: 1.5em;
+    letter-spacing: -0.03em;
+}

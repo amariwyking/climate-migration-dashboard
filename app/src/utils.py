@@ -47,11 +47,6 @@ def get_county_population_history(county_fips: str) -> pd.DataFrame:
 
     
     
-def add_custom_css():
-    st.markdown(
-        """
-        <style>
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+def add_custom_css(file_path):
+    with open(file_path) as f:
+        st.html(f"<style>{f.read()}</style>")

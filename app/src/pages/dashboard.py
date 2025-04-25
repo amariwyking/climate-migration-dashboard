@@ -547,7 +547,9 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
 ####################################################################################################
 ####################################################################################################
 
-st.title('Is America Ready to Move?')
+st.html(
+    '<h1 class="custom-title">Is America Ready to Move?</h1>'
+)
 
 # Get the database connection
 db_conn = db.get_db_connection()
