@@ -360,7 +360,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
     # Create a title for the chart
     st.write(
-        f"####### Total Labor Force, Unemployed Population, and Unemployment Rate (2011-2023)")
+        f"###### Total Labor Force, Unemployed Population, and Unemployment Rate (2011-2023)")
 
     # Create a figure with secondary y-axis using Plotly
     fig = make_subplots(specs=[[{"secondary_y": True}]])
