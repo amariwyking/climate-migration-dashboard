@@ -1,5 +1,4 @@
 import json
-from sqlalchemy import Connection
 import streamlit as st
 import pandas as pd
 import geopandas as gpd
@@ -8,7 +7,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-import src.db as db
+from src.db import db as database, Table
 
 from shapely import wkt
 from urllib.request import urlopen
@@ -41,9 +40,8 @@ def get_risk_color(score, opacity=1.0):
     return f"rgba({r}, {g}, {b}, {opacity})"
 
 
-def national_risk_score(conn: Connection, county_fips):
-    fema_df = db.get_stat_var(
-        conn, db.Table.COUNTY_FEMA_DATA, "FEMA_NRI", county_fips, 2023)
+def national_risk_score(county_fips):
+    fema_df = database.get_stat_var(Table.COUNTY_FEMA_DATA, "FEMA_NRI", county_fips, 2023)
 
     # Dummy NRI data for demonstration
     nri_score = fema_df["FEMA_NRI"].iloc[0]
@@ -124,19 +122,19 @@ def climate_hazards(county_fips, county_name):
     st.plotly_chart(fig)
 
 
-def migration_map(scenario, conn: Connection):
+def migration_map(scenario):
     try:
         with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
             counties = json.load(response)
 
-        counties_data = db.get_county_metadata(conn)
+        counties_data = database.get_county_metadata()
         counties_data = counties_data.merge(
-            db.get_population_projections_by_fips(conn),
+            database.get_population_projections_by_fips(),
             how='inner',
             on='COUNTY_FIPS'
         )
 
-        fema_df = db.get_stat_var(conn, db.Table.COUNTY_FEMA_DATA, "FEMA_NRI",
+        fema_df = database.get_stat_var(Table.COUNTY_FEMA_DATA, "FEMA_NRI",
                                   county_fips=counties_data['COUNTY_FIPS'].tolist(), year=2023)
 
         counties_data = counties_data.merge(
@@ -186,7 +184,7 @@ def migration_map(scenario, conn: Connection):
 
         climate_regions_geojson = climate_regions_gdf.__geo_interface__
 
-        msa_counties = db.get_cbsa_counties(conn, 'metro')
+        msa_counties = database.get_cbsa_counties('metro')
 
         msa_data = counties_data[counties_data['COUNTY_FIPS'].isin(
             msa_counties['COUNTY_FIPS'])]

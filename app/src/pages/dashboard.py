@@ -3,7 +3,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import src.db as db
+
+from src.db import db as database, Table, get_db_connection
 
 from src.components import (
     vertical_spacer,
@@ -23,13 +24,6 @@ def feature_cards(items):
         - icon: Material icon name (without the 'material/' prefix)
         - title: Card title
         - description: Card description
-
-    Example:
-    feature_cards([
-        {"icon": "house", "title": "Housing Cost", "description": "Availability of affordable housing"},
-        {"icon": "work", "title": "Labor Demand", "description": "Strength of local job markets"},
-        {"icon": "cloud_alert", "title": "Climate Risks", "description": "Vulnerability to climate hazards"}
-    ])
     """
     # Add CSS for card styling
     st.markdown("""
@@ -195,8 +189,6 @@ def display_migration_impact_analysis(projections_dict, scenario):
     percent_increase = round(
         (additional_residents / baseline_pop_2065) * 100, 1)
 
-    # Determine impact level based on selected scenario
-
     # Display metrics in same row
     split_row(
         lambda: st.metric(
@@ -213,40 +205,40 @@ def display_migration_impact_analysis(projections_dict, scenario):
     )
 
 
-def display_housing_indicators(county_name, state_name, county_fips, db_conn):
+def display_housing_indicators(county_name, state_name, county_fips):
     st.header('Housing Analysis')
 
     st.write(f"### Median Gross Rent for {county_name}, {state_name}")
-    st.line_chart(db.get_stat_var(
-        db_conn, db.Table.COUNTY_HOUSING_DATA, "MEDIAN_GROSS_RENT", county_fips=county_fips))
+    st.line_chart(database.get_stat_var(Table.COUNTY_HOUSING_DATA,
+                  "MEDIAN_GROSS_RENT", county_fips=county_fips))
 
     st.write(f"### Median House Value for {county_name}, {state_name}")
-    st.line_chart(db.get_stat_var(
-        db_conn, db.Table.COUNTY_HOUSING_DATA, "MEDIAN_HOUSING_VALUE", county_fips=county_fips))
+    st.line_chart(database.get_stat_var(Table.COUNTY_HOUSING_DATA,
+                  "MEDIAN_HOUSING_VALUE", county_fips=county_fips))
 
     st.write(f"### Total Housing Units for {county_name}, {state_name}")
-    st.line_chart(db.get_stat_var(
-        db_conn, db.Table.COUNTY_HOUSING_DATA, "TOTAL_HOUSING_UNITS", county_fips=county_fips))
+    st.line_chart(database.get_stat_var(Table.COUNTY_HOUSING_DATA,
+                  "TOTAL_HOUSING_UNITS", county_fips=county_fips))
 
     st.write(f"### Occupied Housing Units for {county_name}, {state_name}")
-    st.line_chart(db.get_stat_var(
-        db_conn, db.Table.COUNTY_HOUSING_DATA, "OCCUPIED_HOUSING_UNITS", county_fips=county_fips))
+    st.line_chart(database.get_stat_var(Table.COUNTY_HOUSING_DATA,
+                  "OCCUPIED_HOUSING_UNITS", county_fips=county_fips))
 
 
-def display_education_indicators(county_name, state_name, county_fips, db_conn):
+def display_education_indicators(county_name, state_name, county_fips):
     st.header('Education Analysis')
 
     # Retrieve all the educational attainment data needed for the chart
-    less_than_hs_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
-    hs_graduate_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_TOTAL", county_fips=county_fips)
-    some_college_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
-    bachelors_higher_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
-    total_pop_25_64_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "TOTAL_POPULATION_25_64", county_fips=county_fips)
+    less_than_hs_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
+    hs_graduate_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_TOTAL", county_fips=county_fips)
+    some_college_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
+    bachelors_higher_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
+    total_pop_25_64_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "TOTAL_POPULATION_25_64", county_fips=county_fips)
 
     # Combine all dataframes into one
     final_df = pd.DataFrame()
@@ -339,17 +331,17 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def display_unemployment_indicators(county_name, state_name, county_fips, db_conn):
+def display_unemployment_indicators(county_name, state_name, county_fips):
     st.header('Unemployment Analysis')
 
     # Retrieve the unemployment data needed for the chart
     # Using the same pattern as your education function but with economic data table
-    total_labor_force_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "TOTAL_LABOR_FORCE", county_fips=county_fips)
-    unemployed_persons_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYED_PERSONS", county_fips=county_fips)
-    unemployment_rate_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYMENT_RATE", county_fips=county_fips)
+    total_labor_force_df = database.get_stat_var(
+        Table.COUNTY_ECONOMIC_DATA, "TOTAL_LABOR_FORCE", county_fips=county_fips)
+    unemployed_persons_df = database.get_stat_var(
+        Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYED_PERSONS", county_fips=county_fips)
+    unemployment_rate_df = database.get_stat_var(
+        Table.COUNTY_ECONOMIC_DATA, "UNEMPLOYMENT_RATE", county_fips=county_fips)
 
     # Combine all dataframes into one
     total_unemployment = pd.DataFrame()
@@ -417,29 +409,29 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
     st.plotly_chart(fig, use_container_width=True)
 
 
-def display_unemployment_by_education(county_name, state_name, county_fips, db_conn):
+def display_unemployment_by_education(county_name, state_name, county_fips):
     st.header('Unemployment by Education Level')
 
     # Retrieve raw counts for each education level - both unemployed and total population
     # Unemployed counts
-    less_than_hs_unemployed_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_UNEMPLOYED", county_fips=county_fips)
-    hs_graduate_unemployed_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_UNEMPLOYED", county_fips=county_fips)
-    some_college_unemployed_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_UNEMPLOYED", county_fips=county_fips)
-    bachelors_higher_unemployed_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_UNEMPLOYED", county_fips=county_fips)
+    less_than_hs_unemployed_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_UNEMPLOYED", county_fips=county_fips)
+    hs_graduate_unemployed_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_UNEMPLOYED", county_fips=county_fips)
+    some_college_unemployed_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_UNEMPLOYED", county_fips=county_fips)
+    bachelors_higher_unemployed_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_UNEMPLOYED", county_fips=county_fips)
 
     # Total population counts
-    less_than_hs_total_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
-    hs_graduate_total_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_TOTAL", county_fips=county_fips)
-    some_college_total_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
-    bachelors_higher_total_df = db.get_stat_var(
-        db_conn, db.Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
+    less_than_hs_total_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "LESS_THAN_HIGH_SCHOOL_TOTAL", county_fips=county_fips)
+    hs_graduate_total_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "HIGH_SCHOOL_GRADUATE_TOTAL", county_fips=county_fips)
+    some_college_total_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "SOME_COLLEGE_TOTAL", county_fips=county_fips)
+    bachelors_higher_total_df = database.get_stat_var(
+        Table.COUNTY_EDUCATION_DATA, "BACHELORS_OR_HIGHER_TOTAL", county_fips=county_fips)
 
     # Combine all dataframes into one
     unemployment_by_edulevel = pd.DataFrame()
@@ -551,17 +543,16 @@ st.html(
     '<h1 class="custom-title">Is America Ready to Move?</h1>'
 )
 
-# Get the database connection
-db_conn = db.get_db_connection()
+# Initialize the Database connection
+db_conn = get_db_connection()
 
-counties = db.get_county_metadata(db_conn).set_index('COUNTY_FIPS')
+# Make all database calls using database instead of just db
+counties = database.get_county_metadata().set_index('COUNTY_FIPS')
 
-population_historical = db.get_population_timeseries(
-    db_conn, None
+population_historical = database.get_population_timeseries().set_index('COUNTY_FIPS')
+
+population_projections = database.get_population_projections_by_fips(
 ).set_index('COUNTY_FIPS')
-
-population_projections = db.get_population_projections_by_fips(
-    db_conn, None).set_index('COUNTY_FIPS')
 
 selected_county_fips = '36029'
 
@@ -594,7 +585,8 @@ with st.sidebar:
         selected_scenario
     )
 
-    national_risk_score(db_conn, selected_county_fips)
+    national_risk_score(selected_county_fips)
+
 
 # Short paragraph explaining why climate migration will occur and how
 st.markdown("""
@@ -603,7 +595,7 @@ Climate change is increasingly driving population shifts across the United State
 """)
 
 # Climate migration choropleth of US counties
-migration_map(selected_scenario, db_conn)
+migration_map(selected_scenario)
 
 st.markdown("""
             ### Climate Vulnerability Isn't the Whole Story
@@ -633,8 +625,7 @@ vertical_spacer(5)
 
 # Get the County FIPS code, which will be used for all future queries
 if selected_county_fips:
-    county_metadata = db.get_county_metadata(
-        db_conn, selected_county_fips).iloc[0]
+    county_metadata = database.get_county_metadata().iloc[0]
     # Separate the county and state names
     full_name = county_metadata['NAME']
     county_name, state_name = full_name.split(', ')
@@ -652,20 +643,11 @@ if selected_county_fips:
 
     """)
 
-    # feature_cards([
-    #     {"title": "Census Bureau Projection",
-    #         "description": "Standard population growth projections without accounting for climate effects"},
-    #     {"title": "Economic Adjustment Baseline",
-    #         "description": "Includes economic factors like wages and housing prices, but no climate migration effects"},
-    # ])
-
     st.write("**Climate Migration Scenarios**:")
 
     feature_cards([
-        # {"title": "Census Bureau Projection",
-        #  "description": "Standard population growth projections without accounting for climate effects"},
         {"title": "No Impact",
-            "description": "Only models feedback between labor and housing in migration secisions"},
+            "description": "Only models feedback between labor and housing in migration decisions"},
         {"title": "Low Impact",
             "description": "Represents modest climate-influenced migration (50% of projected effect)"},
         {"title": "Medium Impact",
@@ -690,12 +672,12 @@ if selected_county_fips:
         f"The following indicators show how {county_name} may be affected by projected population changes:")
 
     display_education_indicators(
-        county_name, state_name, selected_county_fips, db_conn)
+        county_name, state_name, selected_county_fips)
 
     split_row(
         lambda: display_unemployment_indicators(
-            county_name, state_name, selected_county_fips, db_conn),
+            county_name, state_name, selected_county_fips),
         lambda: display_unemployment_by_education(
-            county_name, state_name, selected_county_fips, db_conn),
+            county_name, state_name, selected_county_fips),
         [0.5, 0.5]
     )
