@@ -14,6 +14,107 @@ from src.components import (
 )
 
 
+def feature_cards(items):
+    """
+    Display a grid of feature cards with material icons, titles, and descriptions.
+
+    Parameters:
+    - items: List of dictionaries, each containing:
+        - icon: Material icon name (without the 'material/' prefix)
+        - title: Card title
+        - description: Card description
+
+    Example:
+    feature_cards([
+        {"icon": "house", "title": "Housing Cost", "description": "Availability of affordable housing"},
+        {"icon": "work", "title": "Labor Demand", "description": "Strength of local job markets"},
+        {"icon": "cloud_alert", "title": "Climate Risks", "description": "Vulnerability to climate hazards"}
+    ])
+    """
+    # Add CSS for card styling
+    st.markdown("""
+    <style>
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .feature-card {
+            flex: 1;
+            min-width: 200px;
+            background-color: blue;
+            border: 1px solid rgba(49, 51, 63, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-description {
+            color: #666;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Create columns for the cards
+    cols = st.columns(len(items))
+
+    # Generate each card in the appropriate column
+    for col, item in zip(cols, items):
+        with col:
+            # Each column gets its own card
+            with st.container():
+                # Show the icon and title
+                if 'icon' in item.keys():
+                    st.markdown(f"### **:material/{item['icon']}:**")
+
+                st.markdown(f"##### **{item['title']}**")
+
+                # Show the description
+                st.markdown(item['description'])
+
+                # Add spacing
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Apply card styling to this container
+                st.markdown("""
+                <style>
+                    div[data-testid="column"] > div:first-child {
+                        background-color: white;
+                        border: 1px solid rgba(49, 51, 63, 0.2);
+                        border-radius: 8px;
+                        padding: 16px;
+                        height: 100%;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                        transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    }
+                    div[data-testid="column"] > div:first-child:hover {
+                        transform: translateY(-4px);
+                        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+                    }
+                    
+                    div[data-testid="column"] h3 {
+                        margin-top: 4px;
+                        margin-bottom: 4px;
+                        padding-top: 0;
+                        padding-bottom: 0;
+                    }
+                </style>
+                """, unsafe_allow_html=True)
+
+
 def display_population_projections(county_name, state_name, county_fips, population_historical, population_projections):
     st.write(f"### Population Projections for {county_name}, {state_name}")
 
@@ -113,7 +214,7 @@ def display_migration_impact_analysis(projections_dict, scenario):
 
 
 def display_housing_indicators(county_name, state_name, county_fips, db_conn):
-    st.header('Housing Analysis', divider=True)
+    st.header('Housing Analysis')
 
     st.write(f"### Median Gross Rent for {county_name}, {state_name}")
     st.line_chart(db.get_stat_var(
@@ -133,7 +234,7 @@ def display_housing_indicators(county_name, state_name, county_fips, db_conn):
 
 
 def display_education_indicators(county_name, state_name, county_fips, db_conn):
-    st.header('Education Analysis', divider=True)
+    st.header('Education Analysis')
 
     # Retrieve all the educational attainment data needed for the chart
     less_than_hs_df = db.get_stat_var(
@@ -239,7 +340,7 @@ def display_education_indicators(county_name, state_name, county_fips, db_conn):
 
 
 def display_unemployment_indicators(county_name, state_name, county_fips, db_conn):
-    st.header('Unemployment Analysis', divider=True)
+    st.header('Unemployment Analysis')
 
     # Retrieve the unemployment data needed for the chart
     # Using the same pattern as your education function but with economic data table
@@ -259,7 +360,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
     # Create a title for the chart
     st.write(
-        f"### Total Labor Force, Unemployed Population, and Unemployment Rate (2011-2023) in {county_name}, {state_name}")
+        f"####### Total Labor Force, Unemployed Population, and Unemployment Rate (2011-2023)")
 
     # Create a figure with secondary y-axis using Plotly
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -317,7 +418,7 @@ def display_unemployment_indicators(county_name, state_name, county_fips, db_con
 
 
 def display_unemployment_by_education(county_name, state_name, county_fips, db_conn):
-    st.header('Unemployment by Education Level', divider=True)
+    st.header('Unemployment by Education Level')
 
     # Retrieve raw counts for each education level - both unemployed and total population
     # Unemployed counts
@@ -378,7 +479,7 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
 
     # Create a title for the chart
     st.write(
-        f"### Unemployment Rate by Education Level (2011-2023) in {county_name}, {state_name}")
+        f"###### Unemployment Rate by Education Level (2011-2023)")
 
     # Create a figure using Plotly
     fig = go.Figure()
@@ -446,7 +547,6 @@ def display_unemployment_by_education(county_name, state_name, county_fips, db_c
 ####################################################################################################
 ####################################################################################################
 
-
 st.title('Is America Ready to Move?')
 
 # Get the database connection
@@ -480,7 +580,7 @@ with st.sidebar:
     }
 
     selected_scenario = st.selectbox(
-        "Select a climate migration scenario:",
+        "Select a climate impact scenario:",
         # Exclude Scenario S3 (baseline)
         options=list(impact_map.keys()),
         format_func=lambda sel: impact_map.get(sel),
@@ -500,6 +600,9 @@ st.markdown("""
 Climate change is increasingly driving population shifts across the United States. As extreme weather events become more frequent and severe, communities around the country face challenges including sea-level rise, extreme heat, drought, wildfires, and flooding. These environmental pressures are expected to force increasingly more people to relocate from high-risk areas to regions with better climate resilience, impacting local economies, housing markets, and public services.
 """)
 
+# Climate migration choropleth of US counties
+migration_map(selected_scenario, db_conn)
+
 st.markdown("""
             ### Climate Vulnerability Isn't the Whole Story
             """)
@@ -507,14 +610,16 @@ st.markdown("""
             Of course, climate vulnerability won't be the only factor that drives migration decisions. While some people may consider leaving areas prone to climate hazards, research shows that economic factors like job opportunities and wages will still play a dominant role in determining if, when, and where people relocate.
             """)
 
-st.markdown("""
-            - **:material/house: Housing Cost** - Availability of affordable housing
-            - **:material/work: Labor Demand** - Strength of local job markets
-            - **:material/cloud_alert: Climate Risks** - Vulnerability to climate hazards
-            """)
-
-# Climate migration choropleth of US counties
-migration_map(selected_scenario, db_conn)
+feature_cards(
+    [
+        {"icon": "house", "title": "Housing Cost",
+            "description": "Availability of affordable housing"},
+        {"icon": "work", "title": "Labor Demand",
+            "description": "Strength of local job markets"},
+        {"icon": "cloud_alert", "title": "Climate Risks",
+            "description": "Vulnerability to climate hazards"},
+    ]
+)
 
 
 # Explain factors that will affect the magnitude of climate-induced migration
@@ -524,19 +629,15 @@ with st.expander("Read more about migration factors", icon=":material/article:")
 
 vertical_spacer(5)
 
-# 4. Select a county to see how it may be impacted
-st.markdown(
-    "Select a county to see how it may be impacted by climate-induced migration:")
-
 # Get the County FIPS code, which will be used for all future queries
 if selected_county_fips:
-    county_metadata=db.get_county_metadata(
+    county_metadata = db.get_county_metadata(
         db_conn, selected_county_fips).iloc[0]
     # Separate the county and state names
-    full_name=county_metadata['NAME']
-    county_name, state_name=full_name.split(', ')
+    full_name = county_metadata['NAME']
+    county_name, state_name = full_name.split(', ')
 else:
-    county_name=state_name=selected_county_fips=None
+    county_name = state_name = selected_county_fips = None
 
 if selected_county_fips:
     # 6. Show current population and projected populations of the county
@@ -547,19 +648,35 @@ if selected_county_fips:
 
         #### What These Scenarios Mean:
 
-        **Baseline Scenarios**:
-        - **Census Projection**: Standard population growth projections without accounting for climate effects
-        - **Economic Adjustment Baseline**: Includes economic factors like wages and housing prices, but no climate migration effects
-
-        **Climate Migration Scenarios**:
-        - **Low Impact**: Represents modest climate-influenced migration (50% of projected effect)
-        - **Medium Impact**: Shows the full projected climate migration effect based on research by Fan et al.
-        - **High Impact**: Illustrates an intensified climate migration scenario (150% of projected effect)
-
-        These projections help visualize how climate change could reshape population distribution across regions, with some areas experiencing population growth (Northeast, West, California) and others facing decline (South, Midwest) due to climate-related migration pressures.
-
-        The data is derived from research on climate-induced migration patterns, which considers factors including extreme weather events, economic opportunities, and regional climate vulnerabilities.
     """)
+
+    # feature_cards([
+    #     {"title": "Census Bureau Projection",
+    #         "description": "Standard population growth projections without accounting for climate effects"},
+    #     {"title": "Economic Adjustment Baseline",
+    #         "description": "Includes economic factors like wages and housing prices, but no climate migration effects"},
+    # ])
+
+    st.write("**Climate Migration Scenarios**:")
+
+    feature_cards([
+        # {"title": "Census Bureau Projection",
+        #  "description": "Standard population growth projections without accounting for climate effects"},
+        {"title": "No Impact",
+            "description": "Only models feedback between labor and housing in migration secisions"},
+        {"title": "Low Impact",
+            "description": "Represents modest climate-influenced migration (50% of projected effect)"},
+        {"title": "Medium Impact",
+            "description": "The expected influence of climate migration on migration decisions (100% of projected effect)"},
+        {"title": "High Impact",
+            "description": "Illustrates an intensified climate migration scenario (200% of projected effect)"},
+    ])
+
+    st.markdown("""
+                These projections help visualize how climate change could reshape population distribution across regions, with some areas experiencing population growth (Northeast, West, California) and others facing decline (South, Midwest) due to climate-related migration pressures.
+
+                The data is derived from research on climate-induced migration patterns, which considers factors including extreme weather events, economic opportunities, and regional climate vulnerabilities.
+                """)
 
     # if not population_projections.empty:
     #     display_population_projections(
